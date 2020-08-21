@@ -1,0 +1,6 @@
+applicationType: default
+defaultPackage: me.self.familytree
+testFramework: kotlintest
+sourceLanguage: kotlin
+buildTool: gradle
+features: [annotation-api, app-name, docker, file-watch, gradle, hibernate-validator, http-client, jib, kotlin, kotlin-application, kotlin-extension-functions, kotlintest, log4j2, multi-tenancy, neo4j-bolt, netty-server, readme, security, security-annotations, yaml]

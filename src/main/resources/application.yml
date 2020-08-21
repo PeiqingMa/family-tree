@@ -1,0 +1,7 @@
+micronaut:
+  application:
+    name: familyTree
+neo4j:
+  uri: bolt://${NEO4J_HOST:localhost}
+  username: neo4j
+  password: ${NEO4J_PASSWORD:neo4j}
