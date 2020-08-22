@@ -12,15 +12,21 @@ class FamilyTreeDao(
         @Inject val driver: Driver
 ) {
     private val session by lazy { SessionFactory(BoltDriver(driver), "me.self.familytree.beans").openSession()!! }
-    private val depth = 1;
-    private val depthOnly = 0;
+    private val depthOne = 1;
+    private val depthTwo = 1;
+    private val depthZero = 0;
 
     fun findPerson(personId: Long): Person? {
-        return session.load(Person::class.java, personId, depth)
+        return session.load(Person::class.java, personId, depthOne)
     }
 
     fun upsertPerson(person: Person): Person? {
-        session.save(person, depth)
+        session.save(person, depthTwo)
+        return person.id?.let { findPerson(it) }
+    }
+
+    fun updatePersonProperties(person: Person): Person? {
+        session.save(person, depthZero)
         return person.id?.let { findPerson(it) }
     }
 }

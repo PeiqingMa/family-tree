@@ -10,8 +10,14 @@ class Person {
     @Id
     @GeneratedValue
     var id: Long? = null
-    var names: List<String>? = null
+    var names: Set<String>? = null
     var bioGender: Gender? = null
+        set(value) {
+            field = value
+            if (this.socialGender == null) {
+                value?.also { this.socialGender = it.name }
+            }
+        }
     var socialGender: String? = null
     var lifeFrom: String? = null
     var lifeEnd: String? = null
@@ -28,6 +34,56 @@ class Person {
     var spouses: List<SpouseRelation>? = null
     @Relationship(value = FamilyRelations.CHILD)
     var children: List<Person>? = null
+
+    fun addName(name: String) {
+        if (names.isNullOrEmpty()) {
+            names = setOf(name)
+        } else {
+            names = names!! + name
+        }
+    }
+
+    fun addParent(parent: Person) {
+        this.parents = addListNoDup(this.parents, parent)
+    }
+
+    fun addChild(child: Person) {
+        this.children = addListNoDup(this.children, child)
+    }
+
+    fun addSpouse(spouse: Person, from: String? = null, end: String? = null) {
+        val relation = SpouseRelation().also {
+            it.currentPerson = this
+            it.anotherPerson = spouse
+            it.spouseFrom = from
+            it.spouseEnd = end
+        }
+        val currentSpouses = this.spouses
+        if (currentSpouses.isNullOrEmpty()) {
+            this.spouses = listOf(relation)
+        } else {
+            val theSpouse = currentSpouses.filter {
+                it.anotherPerson?.id != null && it.anotherPerson?.id == spouse.id
+            }.firstOrNull()
+            if (theSpouse == null) {
+                this.spouses = currentSpouses + relation
+            } else {
+                if (from != null && theSpouse.spouseFrom != from) {
+                    theSpouse.spouseFrom = from
+                }
+                if (end != null && theSpouse.spouseEnd != end) {
+                    theSpouse.spouseEnd = end
+                }
+            }
+        }
+    }
+
+    private fun addListNoDup(list: List<Person>?, newPerson: Person): List<Person> {
+        if (list.isNullOrEmpty()) return listOf(newPerson)
+        val alreadyHas = list.any { it.id != null && it.id == newPerson.id }
+        if (alreadyHas) return list
+        return list + newPerson
+    }
 
 }
 
