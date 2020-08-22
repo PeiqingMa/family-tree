@@ -25,7 +25,7 @@ class FamilyTreeDao(
         return person.id?.let { findPerson(it) }
     }
 
-    fun updatePersonProperties(person: Person): Person? {
+    fun upsertPersonProperties(person: Person): Person? {
         session.save(person, depthZero)
         return person.id?.let { findPerson(it) }
     }

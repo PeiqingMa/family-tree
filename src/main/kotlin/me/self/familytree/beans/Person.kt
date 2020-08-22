@@ -39,10 +39,10 @@ class Person {
     var children: List<Person>? = null
 
     fun addName(name: String) {
-        if (names.isNullOrEmpty()) {
-            names = setOf(name)
+        names = if (names.isNullOrEmpty()) {
+            setOf(name)
         } else {
-            names = names!! + name
+            names!! + name
         }
         this.allNames = names?.joinToString(" ")
     }

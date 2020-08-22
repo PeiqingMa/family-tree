@@ -16,7 +16,7 @@ class FamilyTreeService(
     }
 
     fun addPerson(person: Person): Person? {
-        return familyTreeDao.upsertPerson(person)
+        return familyTreeDao.upsertPersonProperties(person)
     }
 
     fun addRelation(currentPersonId: Long, anotherPersonId: Long, relation: FamilyRelations.Type) {
