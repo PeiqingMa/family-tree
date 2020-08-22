@@ -19,6 +19,7 @@ class Person {
             }
         }
     var socialGender: String? = null
+        get() = if (field == null) this.bioGender?.name else field
     var lifeFrom: String? = null
     var lifeEnd: String? = null
     var birthPlace: String? = null

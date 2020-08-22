@@ -27,3 +27,11 @@ Relations:
   - spouse. properties:
     - from
     - end
+
+## Endpoints:
+  - Add a new person (without relations)
+  - Update a person (properties only)
+  - Add a relation between two persons
+  - Add a new person as parent/child/... of an existing person
+  - Remove a relation between two persons
+  - Delete a person
