@@ -1,16 +1,18 @@
 package me.self.familytree.beans
 
-import org.neo4j.ogm.annotation.GeneratedValue
-import org.neo4j.ogm.annotation.Id
-import org.neo4j.ogm.annotation.NodeEntity
-import org.neo4j.ogm.annotation.Relationship
+import org.neo4j.ogm.annotation.*
 
 @NodeEntity
 class Person {
     @Id
     @GeneratedValue
     var id: Long? = null
+    @Index
+    var allNames: String? = null
+        private set
+//        get() = this.names?.joinToString(" ")
     var names: Set<String>? = null
+        private set
     var bioGender: Gender? = null
         set(value) {
             field = value
@@ -19,7 +21,7 @@ class Person {
             }
         }
     var socialGender: String? = null
-        get() = if (field == null) this.bioGender?.name else field
+//        get() = if (field == null) this.bioGender?.name else field
     var lifeFrom: String? = null
     var lifeEnd: String? = null
     var birthPlace: String? = null
@@ -42,6 +44,7 @@ class Person {
         } else {
             names = names!! + name
         }
+        this.allNames = names?.joinToString(" ")
     }
 
     fun addParent(parent: Person) {
