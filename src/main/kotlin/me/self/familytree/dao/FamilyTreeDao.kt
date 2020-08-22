@@ -13,7 +13,7 @@ class FamilyTreeDao(
 ) {
     private val session by lazy { SessionFactory(BoltDriver(driver), "me.self.familytree.beans").openSession()!! }
     private val depthOne = 1;
-    private val depthTwo = 1;
+    private val depthTwo = 2;
     private val depthZero = 0;
 
     fun findPerson(personId: Long): Person? {
