@@ -23,7 +23,7 @@ class FamilyTreeDaoTest(private val familyTreeDao: FamilyTreeDao) {
         another.addName(anotherName)
         another.bioGender = Gender.Female
         person.bioMother = another
-        person.parents = listOf(another)
+        person.addParent(another)
         person.id = saved?.id
         val updated = familyTreeDao.upsertPerson(person)
         assertNotNull(updated?.bioMother)
