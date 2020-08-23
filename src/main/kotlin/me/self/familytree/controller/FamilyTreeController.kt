@@ -1,25 +1,38 @@
 package me.self.familytree.controller
 
-import io.micronaut.http.MediaType
+import io.micronaut.http.HttpResponse
 import io.micronaut.http.annotation.*
+import me.self.familytree.beans.FamilyRelations
 import me.self.familytree.beans.Person
+import me.self.familytree.beans.RelationRequest
 import me.self.familytree.service.FamilyTreeService
 import javax.inject.Inject
 
-@Controller("/v1", produces = [MediaType.APPLICATION_JSON])
+@Controller("/v1")
 class FamilyTreeController(
         @Inject private val familyTreeService: FamilyTreeService
 ) {
 
-    @Post("/person", consumes = [MediaType.APPLICATION_JSON])
+    @Post("/person")
     fun addPerson(@Body inputPerson: Person): Person? {
         return familyTreeService.addPerson(inputPerson)
     }
 
-    @Put("/person/{id:[0-9]+}", consumes = [MediaType.APPLICATION_JSON])
+    @Put("/person/{id:[0-9]+}")
     fun updatePerson(@PathVariable id: Long, @Body inputPerson: Person): Person? {
         inputPerson.id = id
         return familyTreeService.addPerson(inputPerson)
+    }
+
+    @Post("/relation")
+    fun addRelation(@Body request: RelationRequest): HttpResponse<Person?> {
+        if (request.relationType == FamilyRelations.Type.spouse) {
+            familyTreeService.addSpouse(request.currentId, request.anotherId, request.spouseFrom, request.spouseEnd)
+        } else {
+            familyTreeService.addRelation(request.currentId, request.anotherId, request.relationType)
+        }
+        val updated = familyTreeService.findPerson(request.currentId)
+        return if (updated == null) HttpResponse.badRequest() else HttpResponse.ok(updated)
     }
 
 }

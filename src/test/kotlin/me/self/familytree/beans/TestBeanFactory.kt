@@ -10,6 +10,10 @@ import javax.inject.Singleton
 @Factory
 class TestBeanFactory {
 
+    /**
+     * override me.self.familytree.beans.BeanFactory.sessionFactory
+     * use embedded Neo4j in test
+     */
     @Primary
     @Singleton
     fun sessionFactory(): SessionFactory {

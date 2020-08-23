@@ -1,12 +1,18 @@
 package me.self.familytree.beans
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import org.neo4j.ogm.annotation.*
 
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator::class, property = "id")
 @NodeEntity
 class Person {
+
     @Id
     @GeneratedValue
     var id: Long? = null
+    @JsonIgnore
     @Index
     var allNames: String? = null
         private set

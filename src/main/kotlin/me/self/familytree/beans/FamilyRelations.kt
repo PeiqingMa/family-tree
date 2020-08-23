@@ -1,5 +1,7 @@
 package me.self.familytree.beans
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo
+import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import org.neo4j.ogm.annotation.*
 
 object FamilyRelations {
@@ -62,6 +64,7 @@ class ChildRelation {
     var child: Person? = null
 }
 
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator::class, property = "id")
 @RelationshipEntity(value = FamilyRelations.SPOUSE)
 class SpouseRelation {
     @Id
