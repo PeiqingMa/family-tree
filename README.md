@@ -1,4 +1,4 @@
-## An application to manage Family Tree
+## Family Tree Management System
 
 Using:  
   - Micronaut
