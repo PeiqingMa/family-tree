@@ -7,7 +7,8 @@ import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import org.neo4j.ogm.annotation.*
 
 /**
- * JsonIdentityInfo is used to solve circular reference problem:
+ * JsonIdentityInfo JsonManagedReference and JsonBackReference(in SpouseRelation)
+ * is used to solve circular reference problem:
  * https://www.baeldung.com/jackson-bidirectional-relationships-and-infinite-recursion
  */
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator::class, property = "id")
@@ -21,7 +22,6 @@ class Person {
     @Index
     var allNames: String? = null
         private set
-//        get() = this.names?.joinToString(" ")
     var names: Set<String>? = null
         set(value) {
             field = value
@@ -35,7 +35,6 @@ class Person {
             }
         }
     var socialGender: String? = null
-//        get() = if (field == null) this.bioGender?.name else field
     var lifeFrom: String? = null
     var lifeEnd: String? = null
     var birthPlace: String? = null
@@ -47,11 +46,14 @@ class Person {
     var bioMother: Person? = null
     @Relationship(value = FamilyRelations.PARENT)
     var parents: List<Person>? = null
+        private set
     @JsonManagedReference
     @Relationship(value = FamilyRelations.SPOUSE, direction = Relationship.UNDIRECTED)
     var spouses: List<SpouseRelation>? = null
+        private set
     @Relationship(value = FamilyRelations.CHILD)
     var children: List<Person>? = null
+        private set
 
     fun addName(name: String) {
         names = if (names.isNullOrEmpty()) {
