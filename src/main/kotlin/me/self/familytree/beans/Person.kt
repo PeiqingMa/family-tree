@@ -67,8 +67,16 @@ class Person {
         this.parents = addListNoDup(this.parents, parent)
     }
 
+    fun removeParent(id: Long) {
+        this.parents = removeFrom(this.parents, id)
+    }
+
     fun addChild(child: Person) {
         this.children = addListNoDup(this.children, child)
+    }
+
+    fun removeChild(id: Long) {
+        this.children = removeFrom(this.children, id)
     }
 
     fun addSpouse(spouse: Person, from: String? = null, end: String? = null) {
@@ -98,11 +106,26 @@ class Person {
         }
     }
 
+    /**
+     * return: true if successfully removed
+     */
+    fun removeSpouse(id1: Long, id2: Long): Boolean {
+        val list = this.spouses
+        this.spouses = if (list.isNullOrEmpty()) list
+        else list.dropWhile { it.areSpouse(id1, id2) }
+        return list?.size != this.spouses?.size
+    }
+
     private fun addListNoDup(list: List<Person>?, newPerson: Person): List<Person> {
         if (list.isNullOrEmpty()) return listOf(newPerson)
         val alreadyHas = list.any { it.id != null && it.id == newPerson.id }
         if (alreadyHas) return list
         return list + newPerson
+    }
+
+    private fun removeFrom(list: List<Person>?, personId: Long): List<Person>? {
+        if (list.isNullOrEmpty()) return null
+        return list.dropWhile { it.id == personId }
     }
 
 }

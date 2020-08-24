@@ -10,12 +10,14 @@ object FamilyRelations {
     const val CHILD = "child_is"
     const val SPOUSE = "spouse_is"
 
-    enum class Type {
-        bioFather,
-        bioMother,
-        parent,
-        child,
-        spouse,
+    enum class Type(val label: String) {
+        BioFather(BIO_FATHER),
+        BioMother(BIO_MOTHER),
+        Parent(PARENT),
+        Child(CHILD),
+        Spouse(SPOUSE),
+//        All(""), // placeholder, should not be used in db
+        ;
     }
 }
 
@@ -31,6 +33,11 @@ class SpouseRelation {
     var currentPerson: Person? = null
     @EndNode
     var anotherPerson: Person? = null
+
+    fun areSpouse(id1: Long, id2: Long): Boolean {
+        return (this.currentPerson?.id == id1 && this.anotherPerson?.id == id2) ||
+                (this.currentPerson?.id == id2 && this.anotherPerson?.id == id1)
+    }
 }
 
 //@RelationshipEntity(value = FamilyRelations.BIO_FATHER)

@@ -18,6 +18,10 @@ class FamilyTreeDao(
         return session.load(Person::class.java, personId, depthOne)
     }
 
+    fun findPersonWithSecondRelation(personId: Long): Person? {
+        return session.load(Person::class.java, personId, depthTwo)
+    }
+
     fun upsertPerson(person: Person): Person? {
         session.save(person, depthTwo)
         return person.id?.let { findPerson(it) }

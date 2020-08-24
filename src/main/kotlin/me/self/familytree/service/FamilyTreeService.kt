@@ -3,6 +3,8 @@ package me.self.familytree.service
 import me.self.familytree.beans.FamilyRelations
 import me.self.familytree.beans.Person
 import me.self.familytree.dao.FamilyTreeDao
+import java.lang.IllegalArgumentException
+import java.lang.RuntimeException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -23,27 +25,58 @@ class FamilyTreeService(
         val currentPerson = familyTreeDao.findPerson(currentPersonId)?: return
         val anotherPerson = familyTreeDao.findPerson(anotherPersonId)?: return
         when (relation) {
-            FamilyRelations.Type.bioFather -> {
+            FamilyRelations.Type.BioFather -> {
                 currentPerson.bioFather = anotherPerson
                 currentPerson.addParent(anotherPerson)
                 anotherPerson.addChild(currentPerson)
             }
-            FamilyRelations.Type.bioMother -> {
+            FamilyRelations.Type.BioMother -> {
                 currentPerson.bioMother = anotherPerson
                 currentPerson.addParent(anotherPerson)
                 anotherPerson.addChild(currentPerson)
             }
-            FamilyRelations.Type.parent -> {
+            FamilyRelations.Type.Parent -> {
                 currentPerson.addParent(anotherPerson)
                 anotherPerson.addChild(currentPerson)
             }
-            FamilyRelations.Type.child -> {
+            FamilyRelations.Type.Child -> {
                 currentPerson.addChild(anotherPerson)
                 anotherPerson.addParent(currentPerson)
             }
-            FamilyRelations.Type.spouse -> {
+            FamilyRelations.Type.Spouse -> {
                 currentPerson.addSpouse(anotherPerson)
 //                anotherPerson.addSpouse(currentPerson)
+            }
+        }
+        familyTreeDao.upsertPerson(currentPerson)
+    }
+
+    fun removeRelation(currentPersonId: Long, anotherPersonId: Long, relation: FamilyRelations.Type) {
+        val currentPerson = familyTreeDao.findPersonWithSecondRelation(currentPersonId)?: return
+        val anotherPerson = familyTreeDao.findPersonWithSecondRelation(anotherPersonId)?: return
+        when (relation) {
+            FamilyRelations.Type.BioFather -> {
+                if (currentPerson.bioFather?.id == anotherPersonId) {
+                    currentPerson.bioFather = null
+                }
+            }
+            FamilyRelations.Type.BioMother -> {
+                if (currentPerson.bioMother?.id == anotherPersonId) {
+                    currentPerson.bioMother = null
+                }
+            }
+            FamilyRelations.Type.Parent -> {
+                currentPerson.removeParent(anotherPersonId)
+            }
+            FamilyRelations.Type.Child -> {
+                currentPerson.removeChild(anotherPersonId)
+            }
+            FamilyRelations.Type.Spouse -> {
+                currentPerson.removeSpouse(currentPersonId, anotherPersonId)
+                val removed = anotherPerson.removeSpouse(currentPersonId, anotherPersonId)
+                if (removed) {
+                    familyTreeDao.upsertPerson(anotherPerson)
+                }
             }
         }
         familyTreeDao.upsertPerson(currentPerson)

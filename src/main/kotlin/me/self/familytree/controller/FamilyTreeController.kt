@@ -26,7 +26,7 @@ class FamilyTreeController(
 
     @Post("/relation")
     fun addRelation(@Body request: RelationRequest): HttpResponse<Person?> {
-        if (request.relationType == FamilyRelations.Type.spouse) {
+        if (request.relationType == FamilyRelations.Type.Spouse) {
             familyTreeService.addSpouse(request.currentId, request.anotherId, request.spouseFrom, request.spouseEnd)
         } else {
             familyTreeService.addRelation(request.currentId, request.anotherId, request.relationType)
