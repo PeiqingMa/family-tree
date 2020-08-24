@@ -70,7 +70,7 @@ class FamilyTreeControllerTest {
         val response = client.toBlocking().retrieve(request, Person::class.java)
         assertNotNull(response)
         assertTrue(response?.bioFather?.id == secondId)
-        val request2 = HttpRequestFactory.INSTANCE.delete("/v1/relation", requestBody)
+        val request2 = HttpRequestFactory.INSTANCE.put("/v1/relation/delete", requestBody)
         val response2 = client.toBlocking().retrieve(request2, Person::class.java)
         assertNotNull(response2)
         assertNull(response2?.bioFather)

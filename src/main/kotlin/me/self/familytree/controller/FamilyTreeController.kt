@@ -24,6 +24,11 @@ class FamilyTreeController(
         return familyTreeService.addPerson(inputPerson)
     }
 
+    @Get("/person/{id:[0-9]+}")
+    fun findPersonById(@PathVariable id: Long): Person? {
+        return familyTreeService.findPerson(id)
+    }
+
     @Post("/relation")
     fun addRelation(@Body request: RelationRequest): HttpResponse<Person?> {
         if (request.relationType == FamilyRelations.Type.Spouse) {
@@ -35,7 +40,7 @@ class FamilyTreeController(
         return if (updated == null) HttpResponse.badRequest() else HttpResponse.ok(updated)
     }
 
-    @Delete("/relation")
+    @Put("/relation/delete")
     fun removeRelation(@Body request: RelationRequest): HttpResponse<Person?> {
         familyTreeService.removeRelation(request.currentId, request.anotherId, request.relationType)
         val updated = familyTreeService.findPerson(request.currentId)
