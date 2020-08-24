@@ -3,6 +3,7 @@
 ## Goals of V1
   - A web application.
   - Can add a person on web page.
+  - Can upload photos of a person.
   - Can add a relation between two persons.
   
 Person can have:

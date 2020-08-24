@@ -40,6 +40,7 @@ class Person {
     var birthPlace: String? = null
     var deathPlace: String? = null
     var details: String? = null
+    var photos: List<String>? = null
     @Relationship(value = FamilyRelations.BIO_FATHER)
     var bioFather: Person? = null
     @Relationship(value = FamilyRelations.BIO_MOTHER)
