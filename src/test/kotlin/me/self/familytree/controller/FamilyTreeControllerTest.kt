@@ -1,7 +1,7 @@
 package me.self.familytree.controller
 
 import io.micronaut.http.HttpRequestFactory
-import io.micronaut.http.client.HttpClient
+import io.micronaut.http.client.RxHttpClient
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.runtime.server.EmbeddedServer
 import io.micronaut.test.annotation.MicronautTest
@@ -21,30 +21,44 @@ class FamilyTreeControllerTest {
 
     @Inject
     @field:Client("/")
-    lateinit var client: HttpClient
+    lateinit var client: RxHttpClient
 
-    @Test
-    fun testAddPerson(): Long {
-        val name = "Controller Test ${System.nanoTime()}"
+    private fun addPerson(name: String): Person? {
         val person = Person()
         person.addName(name)
         person.bioGender = Gender.Male
         val request = HttpRequestFactory.INSTANCE.post("/v1/person", person)
         val response = client.toBlocking().retrieve(request, Person::class.java)
-        assertNotNull(response?.id)
-        assertTrue(response?.names?.contains(name) == true)
-        return response?.id!!
+        return response
+    }
+
+    @Test
+    fun testAddPerson() {
+        val name = "Controller Test ${System.nanoTime()}"
+        val person = addPerson(name)
+        assertNotNull(person?.id)
+        assertTrue(person?.names?.contains(name) == true)
     }
 
     @Test
     fun testAddRelation() {
-        val firstId = testAddPerson()
-        val secondId = testAddPerson()
+        val firstId = addPerson("Controller First ${System.nanoTime()}")?.id!!
+        val secondId = addPerson("Controller Second ${System.nanoTime()}")?.id!!
         val requestBody = RelationRequest(firstId, secondId, FamilyRelations.Type.bioFather)
         val request = HttpRequestFactory.INSTANCE.post("/v1/relation", requestBody)
         val response = client.toBlocking().retrieve(request, Person::class.java)
         assertNotNull(response)
         assertTrue(response?.bioFather?.id == secondId)
+    }
+
+    @Test
+    fun testAddSpouseRelation() {
+        val firstId = addPerson("Controller First ${System.nanoTime()}")?.id!!
+        val secondId = addPerson("Controller Second ${System.nanoTime()}")?.id!!
+        val requestBody = RelationRequest(firstId, secondId, FamilyRelations.Type.spouse)
+        val request = HttpRequestFactory.INSTANCE.post("/v1/relation", requestBody)
+        val response = client.toBlocking().retrieve(request, Person::class.java)
+        assertNotNull(response?.spouses?.firstOrNull())
     }
 
 }

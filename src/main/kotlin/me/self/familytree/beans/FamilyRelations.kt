@@ -1,7 +1,6 @@
 package me.self.familytree.beans
 
-import com.fasterxml.jackson.annotation.JsonIdentityInfo
-import com.fasterxml.jackson.annotation.ObjectIdGenerators
+import com.fasterxml.jackson.annotation.JsonBackReference
 import org.neo4j.ogm.annotation.*
 
 object FamilyRelations {
@@ -20,7 +19,6 @@ object FamilyRelations {
     }
 }
 
-@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator::class, property = "id")
 @RelationshipEntity(value = FamilyRelations.SPOUSE)
 class SpouseRelation {
     @Id
@@ -28,6 +26,7 @@ class SpouseRelation {
     var id: Long? = null
     var spouseFrom: String? = null
     var spouseEnd: String? = null
+    @JsonBackReference
     @StartNode
     var currentPerson: Person? = null
     @EndNode

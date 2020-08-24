@@ -43,7 +43,7 @@ class FamilyTreeService(
             }
             FamilyRelations.Type.spouse -> {
                 currentPerson.addSpouse(anotherPerson)
-                anotherPerson.addSpouse(currentPerson)
+//                anotherPerson.addSpouse(currentPerson)
             }
         }
         familyTreeDao.upsertPerson(currentPerson)
@@ -53,7 +53,7 @@ class FamilyTreeService(
         val currentPerson = familyTreeDao.findPerson(currentPersonId)?: return
         val anotherPerson = familyTreeDao.findPerson(anotherPersonId)?: return
         currentPerson.addSpouse(anotherPerson, from, end)
-        anotherPerson.addSpouse(currentPerson, from, end)
+//        anotherPerson.addSpouse(currentPerson, from, end)
         familyTreeDao.upsertPerson(currentPerson)
     }
 }

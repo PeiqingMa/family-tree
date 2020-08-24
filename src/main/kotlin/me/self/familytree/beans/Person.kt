@@ -2,6 +2,7 @@ package me.self.familytree.beans
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonManagedReference
 import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import org.neo4j.ogm.annotation.*
 
@@ -46,6 +47,7 @@ class Person {
     var bioMother: Person? = null
     @Relationship(value = FamilyRelations.PARENT)
     var parents: List<Person>? = null
+    @JsonManagedReference
     @Relationship(value = FamilyRelations.SPOUSE, direction = Relationship.UNDIRECTED)
     var spouses: List<SpouseRelation>? = null
     @Relationship(value = FamilyRelations.CHILD)
