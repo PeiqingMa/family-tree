@@ -18,7 +18,10 @@ class Person {
         private set
 //        get() = this.names?.joinToString(" ")
     var names: Set<String>? = null
-        private set
+        set(value) {
+            field = value
+            this.allNames = value?.joinToString(" ")
+        }
     var bioGender: Gender? = null
         set(value) {
             field = value
@@ -50,7 +53,6 @@ class Person {
         } else {
             names!! + name
         }
-        this.allNames = names?.joinToString(" ")
     }
 
     fun addParent(parent: Person) {
