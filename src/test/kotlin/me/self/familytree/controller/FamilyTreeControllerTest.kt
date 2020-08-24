@@ -61,4 +61,20 @@ class FamilyTreeControllerTest {
         assertNotNull(response?.spouses?.firstOrNull())
     }
 
+    @Test
+    fun testRemoveRelation() {
+        val firstId = addPerson("Controller First ${System.nanoTime()}")?.id!!
+        val secondId = addPerson("Controller Second ${System.nanoTime()}")?.id!!
+        val requestBody = RelationRequest(firstId, secondId, FamilyRelations.Type.BioFather)
+        val request = HttpRequestFactory.INSTANCE.post("/v1/relation", requestBody)
+        val response = client.toBlocking().retrieve(request, Person::class.java)
+        assertNotNull(response)
+        assertTrue(response?.bioFather?.id == secondId)
+        val request2 = HttpRequestFactory.INSTANCE.delete("/v1/relation", requestBody)
+        val response2 = client.toBlocking().retrieve(request2, Person::class.java)
+        assertNotNull(response2)
+        assertNull(response2?.bioFather)
+        assertNotNull(response2?.parents?.firstOrNull())
+    }
+
 }

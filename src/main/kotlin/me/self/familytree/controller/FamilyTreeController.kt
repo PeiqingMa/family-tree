@@ -35,4 +35,11 @@ class FamilyTreeController(
         return if (updated == null) HttpResponse.badRequest() else HttpResponse.ok(updated)
     }
 
+    @Delete("/relation")
+    fun removeRelation(@Body request: RelationRequest): HttpResponse<Person?> {
+        familyTreeService.removeRelation(request.currentId, request.anotherId, request.relationType)
+        val updated = familyTreeService.findPerson(request.currentId)
+        return if (updated == null) HttpResponse.badRequest() else HttpResponse.ok(updated)
+    }
+
 }
