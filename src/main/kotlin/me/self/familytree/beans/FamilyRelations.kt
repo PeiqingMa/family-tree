@@ -20,6 +20,20 @@ object FamilyRelations {
     }
 }
 
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator::class, property = "id")
+@RelationshipEntity(value = FamilyRelations.SPOUSE)
+class SpouseRelation {
+    @Id
+    @GeneratedValue
+    var id: Long? = null
+    var spouseFrom: String? = null
+    var spouseEnd: String? = null
+    @StartNode
+    var currentPerson: Person? = null
+    @EndNode
+    var anotherPerson: Person? = null
+}
+
 //@RelationshipEntity(value = FamilyRelations.BIO_FATHER)
 class BioFatherRelation {
     @Id
@@ -62,18 +76,4 @@ class ChildRelation {
     var parent: Person? = null
     @EndNode
     var child: Person? = null
-}
-
-@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator::class, property = "id")
-@RelationshipEntity(value = FamilyRelations.SPOUSE)
-class SpouseRelation {
-    @Id
-    @GeneratedValue
-    var id: Long? = null
-    var spouseFrom: String? = null
-    var spouseEnd: String? = null
-    @StartNode
-    var currentPerson: Person? = null
-    @EndNode
-    var anotherPerson: Person? = null
 }

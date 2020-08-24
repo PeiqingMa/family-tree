@@ -3,7 +3,7 @@ plugins {
     id "org.jetbrains.kotlin.kapt" version "$kotlinVersion"
     id "org.jetbrains.kotlin.plugin.allopen" version "$kotlinVersion"
     id "application"
-    id "com.google.cloud.tools.jib" version "2.1.0"
+    id "com.google.cloud.tools.jib" version "2.5.0"
 }
 
 version "0.1"
@@ -106,6 +106,6 @@ tasks.withType(JavaExec) {
     }
 }
 
-
+// https://github.com/GoogleContainerTools/jib/tree/master/jib-gradle-plugin
 jib.to.image = 'gcr.io/family-tree/jib-image'
 

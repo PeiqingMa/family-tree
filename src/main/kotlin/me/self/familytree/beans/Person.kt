@@ -5,6 +5,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import org.neo4j.ogm.annotation.*
 
+/**
+ * JsonIdentityInfo is used to solve circular reference problem:
+ * https://www.baeldung.com/jackson-bidirectional-relationships-and-infinite-recursion
+ */
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator::class, property = "id")
 @NodeEntity
 class Person {
