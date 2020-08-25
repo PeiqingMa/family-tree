@@ -21,10 +21,10 @@ Person can have:
   - other info
 
 Relations:
-  - bio father
-  - bio mother
-  - parent
-  - child
+  - parent. properties:
+    - type (bio father/mother, foster father/mother, etc.)
+  - child. properties:
+    - type (bio, adopted, etc.)
   - spouse. properties:
     - from
     - end
