@@ -4,15 +4,15 @@ import com.fasterxml.jackson.annotation.JsonBackReference
 import org.neo4j.ogm.annotation.*
 
 object FamilyRelations {
-    const val BIO_FATHER = "bio_father_is"
-    const val BIO_MOTHER = "bio_mother_is"
+//    const val BIO_FATHER = "bio_father_is"
+//    const val BIO_MOTHER = "bio_mother_is"
     const val PARENT = "parent_is"
     const val CHILD = "child_is"
     const val SPOUSE = "spouse_is"
 
     enum class Type(val label: String) {
-        BioFather(BIO_FATHER),
-        BioMother(BIO_MOTHER),
+//        BioFather(BIO_FATHER),
+//        BioMother(BIO_MOTHER),
         Parent(PARENT),
         Child(CHILD),
         Spouse(SPOUSE),
@@ -62,24 +62,28 @@ class BioMotherRelation {
     var mother: Person? = null
 }
 
-//@RelationshipEntity(value = FamilyRelations.PARENT)
+@RelationshipEntity(value = FamilyRelations.PARENT)
 class ParentRelation {
     @Id
     @GeneratedValue
     var id: Long? = null
+    var type: String? = null
+    @JsonBackReference
     @StartNode
-    var child: Person? = null
+    var me: Person? = null
     @EndNode
     var parent: Person? = null
 }
 
-//@RelationshipEntity(value = FamilyRelations.CHILD)
+@RelationshipEntity(value = FamilyRelations.CHILD)
 class ChildRelation {
     @Id
     @GeneratedValue
     var id: Long? = null
+    var type: String? = null
+    @JsonBackReference
     @StartNode
-    var parent: Person? = null
+    var me: Person? = null
     @EndNode
     var child: Person? = null
 }

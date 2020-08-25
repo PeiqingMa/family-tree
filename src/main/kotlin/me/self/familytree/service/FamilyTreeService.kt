@@ -2,9 +2,8 @@ package me.self.familytree.service
 
 import me.self.familytree.beans.FamilyRelations
 import me.self.familytree.beans.Person
+import me.self.familytree.beans.RelationRequest
 import me.self.familytree.dao.FamilyTreeDao
-import java.lang.IllegalArgumentException
-import java.lang.RuntimeException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,27 +20,17 @@ class FamilyTreeService(
         return familyTreeDao.upsertPersonProperties(person)
     }
 
-    fun addRelation(currentPersonId: Long, anotherPersonId: Long, relation: FamilyRelations.Type) {
-        val currentPerson = familyTreeDao.findPerson(currentPersonId)?: return
-        val anotherPerson = familyTreeDao.findPerson(anotherPersonId)?: return
-        when (relation) {
-            FamilyRelations.Type.BioFather -> {
-                currentPerson.bioFather = anotherPerson
-                currentPerson.addParent(anotherPerson)
-                anotherPerson.addChild(currentPerson)
-            }
-            FamilyRelations.Type.BioMother -> {
-                currentPerson.bioMother = anotherPerson
-                currentPerson.addParent(anotherPerson)
-                anotherPerson.addChild(currentPerson)
-            }
+    fun addRelation(relationRequest: RelationRequest) {
+        val currentPerson = familyTreeDao.findPerson(relationRequest.currentId)?: return
+        val anotherPerson = familyTreeDao.findPerson(relationRequest.anotherId)?: return
+        when (relationRequest.relationType) {
             FamilyRelations.Type.Parent -> {
-                currentPerson.addParent(anotherPerson)
-                anotherPerson.addChild(currentPerson)
+                currentPerson.addParent(anotherPerson, relationRequest.parentType!!)
+                anotherPerson.addChild(currentPerson, relationRequest.childType!!)
             }
             FamilyRelations.Type.Child -> {
-                currentPerson.addChild(anotherPerson)
-                anotherPerson.addParent(currentPerson)
+                currentPerson.addChild(anotherPerson, relationRequest.childType!!)
+                anotherPerson.addParent(currentPerson, relationRequest.parentType!!)
             }
             FamilyRelations.Type.Spouse -> {
                 currentPerson.addSpouse(anotherPerson)
@@ -55,31 +44,21 @@ class FamilyTreeService(
         val currentPerson = familyTreeDao.findPersonWithSecondRelation(currentPersonId)?: return
         val anotherPerson = familyTreeDao.findPersonWithSecondRelation(anotherPersonId)?: return
         when (relation) {
-            FamilyRelations.Type.BioFather -> {
-                if (currentPerson.bioFather?.id == anotherPersonId) {
-                    currentPerson.bioFather = null
-                }
-            }
-            FamilyRelations.Type.BioMother -> {
-                if (currentPerson.bioMother?.id == anotherPersonId) {
-                    currentPerson.bioMother = null
-                }
-            }
             FamilyRelations.Type.Parent -> {
                 currentPerson.removeParent(anotherPersonId)
+                anotherPerson.removeChild(currentPersonId)
             }
             FamilyRelations.Type.Child -> {
                 currentPerson.removeChild(anotherPersonId)
+                anotherPerson.removeParent(currentPersonId)
             }
             FamilyRelations.Type.Spouse -> {
                 currentPerson.removeSpouse(currentPersonId, anotherPersonId)
-                val removed = anotherPerson.removeSpouse(currentPersonId, anotherPersonId)
-                if (removed) {
-                    familyTreeDao.upsertPerson(anotherPerson)
-                }
+                anotherPerson.removeSpouse(currentPersonId, anotherPersonId)
             }
         }
         familyTreeDao.upsertPerson(currentPerson)
+        familyTreeDao.upsertPerson(anotherPerson)
     }
 
     fun addSpouse(currentPersonId: Long, anotherPersonId: Long, from: String?, end: String?) {

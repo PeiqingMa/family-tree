@@ -44,11 +44,17 @@ class FamilyTreeControllerTest {
     fun testAddRelation() {
         val firstId = addPerson("Controller First ${System.nanoTime()}")?.id!!
         val secondId = addPerson("Controller Second ${System.nanoTime()}")?.id!!
-        val requestBody = RelationRequest(firstId, secondId, FamilyRelations.Type.BioFather)
+        val requestBody = RelationRequest(
+                firstId,
+                secondId,
+                FamilyRelations.Type.Parent,
+                "bioFather",
+                "bio"
+        )
         val request = HttpRequestFactory.INSTANCE.post("/v1/relation", requestBody)
         val response = client.toBlocking().retrieve(request, Person::class.java)
         assertNotNull(response)
-        assertTrue(response?.bioFather?.id == secondId)
+        assertTrue(response?.parents?.firstOrNull()?.parent?.id == secondId)
     }
 
     @Test
@@ -65,16 +71,21 @@ class FamilyTreeControllerTest {
     fun testRemoveRelation() {
         val firstId = addPerson("Controller First ${System.nanoTime()}")?.id!!
         val secondId = addPerson("Controller Second ${System.nanoTime()}")?.id!!
-        val requestBody = RelationRequest(firstId, secondId, FamilyRelations.Type.BioFather)
+        val requestBody = RelationRequest(
+                firstId,
+                secondId,
+                FamilyRelations.Type.Parent,
+                "bioFather",
+                "bio"
+        )
         val request = HttpRequestFactory.INSTANCE.post("/v1/relation", requestBody)
         val response = client.toBlocking().retrieve(request, Person::class.java)
         assertNotNull(response)
-        assertTrue(response?.bioFather?.id == secondId)
+        assertTrue(response?.parents?.firstOrNull()?.parent?.id == secondId)
         val request2 = HttpRequestFactory.INSTANCE.put("/v1/relation/delete", requestBody)
         val response2 = client.toBlocking().retrieve(request2, Person::class.java)
         assertNotNull(response2)
-        assertNull(response2?.bioFather)
-        assertNotNull(response2?.parents?.firstOrNull())
+        assertNull(response2?.parents?.firstOrNull())
     }
 
 }

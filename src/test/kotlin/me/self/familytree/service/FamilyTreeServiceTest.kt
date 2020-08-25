@@ -4,6 +4,7 @@ import io.micronaut.test.annotation.MicronautTest
 import me.self.familytree.beans.FamilyRelations
 import me.self.familytree.beans.Gender
 import me.self.familytree.beans.Person
+import me.self.familytree.beans.RelationRequest
 import org.junit.jupiter.api.Test
 
 import org.junit.jupiter.api.Assertions.*
@@ -34,11 +35,17 @@ class FamilyTreeServiceTest(private val familyTreeService: FamilyTreeService) {
         assertNotNull(anotherId)
         assertTrue(anotherSaved?.names?.firstOrNull() == anotherName)
         secondPersonId = anotherId
-        familyTreeService.addRelation(firstId!!, anotherId!!, FamilyRelations.Type.BioMother)
+        val relationRequest = RelationRequest(
+                firstId!!,
+                anotherId!!,
+                FamilyRelations.Type.Parent,
+                "bioMother",
+                "bio"
+        )
+        familyTreeService.addRelation(relationRequest)
         val updatedFirst = familyTreeService.findPerson(firstId)
-        assertNotNull(updatedFirst?.bioMother)
         assertNotNull(updatedFirst?.parents?.firstOrNull())
-        assertTrue(updatedFirst?.parents?.firstOrNull()?.names?.firstOrNull() == anotherName)
+        assertTrue(updatedFirst?.parents?.firstOrNull()?.parent?.names?.firstOrNull() == anotherName)
     }
 
     @Test
@@ -46,13 +53,12 @@ class FamilyTreeServiceTest(private val familyTreeService: FamilyTreeService) {
         testAddRelation()
         assertNotNull(firstPersonId)
         assertNotNull(secondPersonId)
-        val person = familyTreeService.findPerson(firstPersonId!!)
+        val person = familyTreeService.findPerson(secondPersonId!!)
         assertNotNull(person)
-        assertNotNull(person?.bioMother?.id)
-        assertTrue(person?.bioMother?.id == secondPersonId)
-        familyTreeService.removeRelation(firstPersonId!!, secondPersonId!!, FamilyRelations.Type.BioMother)
-        val updated = familyTreeService.findPerson(firstPersonId!!)
+        assertTrue(person?.children?.firstOrNull()?.child?.id == firstPersonId)
+        familyTreeService.removeRelation(firstPersonId!!, secondPersonId!!, FamilyRelations.Type.Parent)
+        val updated = familyTreeService.findPerson(secondPersonId!!)
         assertNotNull(updated)
-        assertNull(updated?.bioMother)
+        assertNull(updated?.children?.firstOrNull())
     }
 }

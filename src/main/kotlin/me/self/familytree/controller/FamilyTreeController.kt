@@ -34,7 +34,10 @@ class FamilyTreeController(
         if (request.relationType == FamilyRelations.Type.Spouse) {
             familyTreeService.addSpouse(request.currentId, request.anotherId, request.spouseFrom, request.spouseEnd)
         } else {
-            familyTreeService.addRelation(request.currentId, request.anotherId, request.relationType)
+            if (request.parentType == null || request.childType == null) {
+                return HttpResponse.badRequest()
+            }
+            familyTreeService.addRelation(request)
         }
         val updated = familyTreeService.findPerson(request.currentId)
         return if (updated == null) HttpResponse.badRequest() else HttpResponse.ok(updated)

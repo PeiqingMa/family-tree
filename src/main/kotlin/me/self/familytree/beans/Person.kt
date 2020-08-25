@@ -41,19 +41,17 @@ class Person {
     var deathPlace: String? = null
     var details: String? = null
     var photos: List<String>? = null
-    @Relationship(value = FamilyRelations.BIO_FATHER)
-    var bioFather: Person? = null
-    @Relationship(value = FamilyRelations.BIO_MOTHER)
-    var bioMother: Person? = null
+    @JsonManagedReference
     @Relationship(value = FamilyRelations.PARENT)
-    var parents: List<Person>? = null
+    var parents: List<ParentRelation>? = null
         private set
     @JsonManagedReference
     @Relationship(value = FamilyRelations.SPOUSE, direction = Relationship.UNDIRECTED)
     var spouses: List<SpouseRelation>? = null
         private set
+    @JsonManagedReference
     @Relationship(value = FamilyRelations.CHILD)
-    var children: List<Person>? = null
+    var children: List<ChildRelation>? = null
         private set
 
     fun addName(name: String) {
@@ -64,20 +62,58 @@ class Person {
         }
     }
 
-    fun addParent(parent: Person) {
-        this.parents = addListNoDup(this.parents, parent)
+    fun addParent(parent: Person, type: String) {
+        val relation = ParentRelation().also {
+            it.me = this
+            it.parent = parent
+            it.type = type
+        }
+        val currentParents = this.parents
+        if (currentParents.isNullOrEmpty()) {
+            this.parents = listOf(relation)
+        } else {
+            val theParent = currentParents.filter {
+                it.parent?.id != null && it.parent?.id == parent.id
+            }.firstOrNull()
+            if (theParent == null) {
+                this.parents = currentParents + relation
+            } else {
+                if (theParent.type != type) {
+                    theParent.type = type
+                }
+            }
+        }
     }
 
     fun removeParent(id: Long) {
-        this.parents = removeFrom(this.parents, id)
+        this.parents = this.parents?.dropWhile { it.parent?.id == id }
     }
 
-    fun addChild(child: Person) {
-        this.children = addListNoDup(this.children, child)
+    fun addChild(child: Person, type: String) {
+        val relation = ChildRelation().also {
+            it.me = this
+            it.child = child
+            it.type = type
+        }
+        val currentChildren = this.children
+        if (currentChildren.isNullOrEmpty()) {
+            this.children = listOf(relation)
+        } else {
+            val theChild = currentChildren.filter {
+                it.child?.id != null && it.child?.id == child.id
+            }.firstOrNull()
+            if (theChild == null) {
+                this.children = currentChildren + relation
+            } else {
+                if (theChild.type != type) {
+                    theChild.type = type
+                }
+            }
+        }
     }
 
     fun removeChild(id: Long) {
-        this.children = removeFrom(this.children, id)
+        this.children = this.children?.dropWhile { it.child?.id == id }
     }
 
     fun addSpouse(spouse: Person, from: String? = null, end: String? = null) {
@@ -115,18 +151,6 @@ class Person {
         this.spouses = if (list.isNullOrEmpty()) list
         else list.dropWhile { it.areSpouse(id1, id2) }
         return list?.size != this.spouses?.size
-    }
-
-    private fun addListNoDup(list: List<Person>?, newPerson: Person): List<Person> {
-        if (list.isNullOrEmpty()) return listOf(newPerson)
-        val alreadyHas = list.any { it.id != null && it.id == newPerson.id }
-        if (alreadyHas) return list
-        return list + newPerson
-    }
-
-    private fun removeFrom(list: List<Person>?, personId: Long): List<Person>? {
-        if (list.isNullOrEmpty()) return null
-        return list.dropWhile { it.id == personId }
     }
 
 }
