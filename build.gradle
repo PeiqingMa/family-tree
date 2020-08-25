@@ -42,7 +42,7 @@ dependencies {
     implementation("org.apache.logging.log4j:log4j-core:$log4j2Version")
     implementation("org.neo4j:neo4j-ogm-core:$neo4jOgmVersion")
     implementation("org.neo4j:neo4j-ogm-bolt-driver:$neo4jOgmVersion")
-    implementation("org.xerial:sqlite-jdbc:$sqliteVersion")
+//    implementation("org.xerial:sqlite-jdbc:$sqliteVersion")
     runtimeOnly("org.apache.logging.log4j:log4j-api:$log4j2Version")
     runtimeOnly("org.apache.logging.log4j:log4j-slf4j-impl:$log4j2Version")
     runtimeOnly("com.fasterxml.jackson.module:jackson-module-kotlin")
@@ -52,8 +52,8 @@ dependencies {
     testImplementation("io.micronaut.test:micronaut-test-junit5")
     testImplementation("org.mockito:mockito-junit-jupiter:2.22.0")
     testImplementation("org.neo4j:neo4j-ogm-embedded-driver:$neo4jOgmVersion")
-    testRuntime("org.junit.jupiter:junit-jupiter-engine:5.1.0")
-    testRuntime("org.neo4j.test:neo4j-harness")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.1.0")
+    testRuntimeOnly("org.neo4j.test:neo4j-harness")
 }
 
 test.classpath += configurations.developmentOnly
