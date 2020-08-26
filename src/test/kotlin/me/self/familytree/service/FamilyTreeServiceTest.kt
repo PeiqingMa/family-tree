@@ -39,8 +39,6 @@ class FamilyTreeServiceTest(private val familyTreeService: FamilyTreeService) {
                 firstId!!,
                 anotherId!!,
                 FamilyRelations.Type.Parent,
-                "bioMother",
-                "bio"
         )
         familyTreeService.addRelation(relationRequest)
         val updatedFirst = familyTreeService.findPerson(firstId)

@@ -62,11 +62,15 @@ class Person {
         }
     }
 
-    fun addParent(parent: Person, type: String) {
+    fun addParent(parent: Person, type: String? = null) {
+        val parentType = type
+                ?: if (parent.bioGender == Gender.Male) ParentType.BioFather.name
+                else if (parent.bioGender == Gender.Female) ParentType.BioMother.name
+                else ParentType.Unknown.name
         val relation = ParentRelation().also {
             it.me = this
             it.parent = parent
-            it.type = type
+            it.type = parentType
         }
         val currentParents = this.parents
         if (currentParents.isNullOrEmpty()) {
@@ -78,8 +82,8 @@ class Person {
             if (theParent == null) {
                 this.parents = currentParents + relation
             } else {
-                if (theParent.type != type) {
-                    theParent.type = type
+                if (theParent.type != parentType) {
+                    theParent.type = parentType
                 }
             }
         }
@@ -89,11 +93,12 @@ class Person {
         this.parents = this.parents?.dropWhile { it.parent?.id == id }
     }
 
-    fun addChild(child: Person, type: String) {
+    fun addChild(child: Person, type: String? = null) {
+        val childType = type ?: ChildType.Bio.name
         val relation = ChildRelation().also {
             it.me = this
             it.child = child
-            it.type = type
+            it.type = childType
         }
         val currentChildren = this.children
         if (currentChildren.isNullOrEmpty()) {
@@ -105,8 +110,8 @@ class Person {
             if (theChild == null) {
                 this.children = currentChildren + relation
             } else {
-                if (theChild.type != type) {
-                    theChild.type = type
+                if (theChild.type != childType) {
+                    theChild.type = childType
                 }
             }
         }

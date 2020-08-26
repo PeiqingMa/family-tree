@@ -25,12 +25,12 @@ class FamilyTreeService(
         val anotherPerson = familyTreeDao.findPerson(relationRequest.anotherId)?: return
         when (relationRequest.relationType) {
             FamilyRelations.Type.Parent -> {
-                currentPerson.addParent(anotherPerson, relationRequest.parentType!!)
-                anotherPerson.addChild(currentPerson, relationRequest.childType!!)
+                currentPerson.addParent(anotherPerson, relationRequest.parentType)
+                anotherPerson.addChild(currentPerson, relationRequest.childType)
             }
             FamilyRelations.Type.Child -> {
-                currentPerson.addChild(anotherPerson, relationRequest.childType!!)
-                anotherPerson.addParent(currentPerson, relationRequest.parentType!!)
+                currentPerson.addChild(anotherPerson, relationRequest.childType)
+                anotherPerson.addParent(currentPerson, relationRequest.parentType)
             }
             FamilyRelations.Type.Spouse -> {
                 currentPerson.addSpouse(anotherPerson)

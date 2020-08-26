@@ -21,6 +21,19 @@ object FamilyRelations {
     }
 }
 
+enum class ParentType {
+    BioFather,
+    BioMother,
+    FosterFather,
+    FosterMother,
+    Unknown,
+}
+
+enum class ChildType {
+    Bio,
+    Adopted,
+}
+
 @RelationshipEntity(value = FamilyRelations.SPOUSE)
 class SpouseRelation {
     @Id
