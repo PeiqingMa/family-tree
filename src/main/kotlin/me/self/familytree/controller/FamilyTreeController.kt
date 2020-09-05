@@ -4,8 +4,10 @@ import io.micronaut.http.HttpResponse
 import io.micronaut.http.annotation.*
 import me.self.familytree.beans.FamilyRelations
 import me.self.familytree.beans.Person
+import me.self.familytree.beans.PersonView
 import me.self.familytree.beans.RelationRequest
 import me.self.familytree.service.FamilyTreeService
+import me.self.familytree.utils.toView
 import javax.inject.Inject
 
 @Controller("/v1")
@@ -14,23 +16,23 @@ class FamilyTreeController(
 ) {
 
     @Post("/person")
-    fun addPerson(@Body inputPerson: Person): Person? {
-        return familyTreeService.addPerson(inputPerson)
+    fun addPerson(@Body inputPerson: Person): PersonView? {
+        return familyTreeService.addPerson(inputPerson)?.toView()
     }
 
     @Put("/person/{id:[0-9]+}")
-    fun updatePerson(@PathVariable id: Long, @Body inputPerson: Person): Person? {
+    fun updatePerson(@PathVariable id: Long, @Body inputPerson: Person): PersonView? {
         inputPerson.id = id
-        return familyTreeService.addPerson(inputPerson)
+        return familyTreeService.addPerson(inputPerson)?.toView()
     }
 
     @Get("/person/{id:[0-9]+}")
-    fun findPersonById(@PathVariable id: Long): Person? {
-        return familyTreeService.findPerson(id)
+    fun findPersonById(@PathVariable id: Long): PersonView? {
+        return familyTreeService.findPerson(id)?.toView()
     }
 
     @Post("/relation")
-    fun addRelation(@Body request: RelationRequest): HttpResponse<Person?> {
+    fun addRelation(@Body request: RelationRequest): HttpResponse<PersonView?> {
         if (request.relationType == FamilyRelations.Type.Spouse) {
             familyTreeService.addSpouse(request.currentId, request.anotherId, request.spouseFrom, request.spouseEnd)
         } else {
@@ -40,14 +42,14 @@ class FamilyTreeController(
             familyTreeService.addRelation(request)
         }
         val updated = familyTreeService.findPerson(request.currentId)
-        return if (updated == null) HttpResponse.badRequest() else HttpResponse.ok(updated)
+        return if (updated == null) HttpResponse.badRequest() else HttpResponse.ok(updated.toView())
     }
 
     @Put("/relation/delete")
-    fun removeRelation(@Body request: RelationRequest): HttpResponse<Person?> {
+    fun removeRelation(@Body request: RelationRequest): HttpResponse<PersonView?> {
         familyTreeService.removeRelation(request.currentId, request.anotherId, request.relationType)
         val updated = familyTreeService.findPerson(request.currentId)
-        return if (updated == null) HttpResponse.badRequest() else HttpResponse.ok(updated)
+        return if (updated == null) HttpResponse.badRequest() else HttpResponse.ok(updated.toView())
     }
 
 }

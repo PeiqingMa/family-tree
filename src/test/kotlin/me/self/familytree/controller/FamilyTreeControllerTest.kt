@@ -5,10 +5,7 @@ import io.micronaut.http.client.RxHttpClient
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.runtime.server.EmbeddedServer
 import io.micronaut.test.annotation.MicronautTest
-import me.self.familytree.beans.FamilyRelations
-import me.self.familytree.beans.Gender
-import me.self.familytree.beans.Person
-import me.self.familytree.beans.RelationRequest
+import me.self.familytree.beans.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import javax.inject.Inject
@@ -23,12 +20,12 @@ class FamilyTreeControllerTest {
     @field:Client("/")
     lateinit var client: RxHttpClient
 
-    private fun addPerson(name: String): Person? {
+    private fun addPerson(name: String): PersonView? {
         val person = Person()
         person.addName(name)
         person.bioGender = Gender.Male
         val request = HttpRequestFactory.INSTANCE.post("/v1/person", person)
-        val response = client.toBlocking().retrieve(request, Person::class.java)
+        val response = client.toBlocking().retrieve(request, PersonView::class.java)
         return response
     }
 
@@ -52,9 +49,9 @@ class FamilyTreeControllerTest {
                 "bio"
         )
         val request = HttpRequestFactory.INSTANCE.post("/v1/relation", requestBody)
-        val response = client.toBlocking().retrieve(request, Person::class.java)
+        val response = client.toBlocking().retrieve(request, PersonView::class.java)
         assertNotNull(response)
-        assertTrue(response?.parents?.firstOrNull()?.parent?.id == secondId)
+        assertTrue(response?.parents?.firstOrNull()?.personId == secondId)
     }
 
     @Test
@@ -63,7 +60,7 @@ class FamilyTreeControllerTest {
         val secondId = addPerson("Controller Second ${System.nanoTime()}")?.id!!
         val requestBody = RelationRequest(firstId, secondId, FamilyRelations.Type.Spouse)
         val request = HttpRequestFactory.INSTANCE.post("/v1/relation", requestBody)
-        val response = client.toBlocking().retrieve(request, Person::class.java)
+        val response = client.toBlocking().retrieve(request, PersonView::class.java)
         assertNotNull(response?.spouses?.firstOrNull())
     }
 
@@ -79,11 +76,11 @@ class FamilyTreeControllerTest {
                 "bio"
         )
         val request = HttpRequestFactory.INSTANCE.post("/v1/relation", requestBody)
-        val response = client.toBlocking().retrieve(request, Person::class.java)
+        val response = client.toBlocking().retrieve(request, PersonView::class.java)
         assertNotNull(response)
-        assertTrue(response?.parents?.firstOrNull()?.parent?.id == secondId)
+        assertTrue(response?.parents?.firstOrNull()?.personId == secondId)
         val request2 = HttpRequestFactory.INSTANCE.put("/v1/relation/delete", requestBody)
-        val response2 = client.toBlocking().retrieve(request2, Person::class.java)
+        val response2 = client.toBlocking().retrieve(request2, PersonView::class.java)
         assertNotNull(response2)
         assertNull(response2?.parents?.firstOrNull())
     }

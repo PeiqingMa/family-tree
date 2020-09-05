@@ -22,7 +22,7 @@ class Person {
     @Index
     var allNames: String? = null
         private set
-    var names: Set<String>? = null
+    var names: List<String>? = null
         set(value) {
             field = value
             this.allNames = value?.joinToString(" ")
@@ -56,7 +56,7 @@ class Person {
 
     fun addName(name: String) {
         names = if (names.isNullOrEmpty()) {
-            setOf(name)
+            listOf(name)
         } else {
             names!! + name
         }
