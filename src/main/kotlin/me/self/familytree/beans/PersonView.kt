@@ -18,6 +18,7 @@ data class PersonView(
 
 data class PersonInRelationView(
         val personId: Long?,
+        val relationId: Long? = null,
         val type: String? = null,
         val names: List<String>?
 )
