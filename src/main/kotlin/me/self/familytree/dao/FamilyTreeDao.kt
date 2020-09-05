@@ -10,9 +10,9 @@ class FamilyTreeDao(
         @Inject val sessionFactory: SessionFactory
 ) {
     private val session by lazy { sessionFactory.openSession()!! }
-    private val depthOne = 1;
-    private val depthTwo = 2;
-    private val depthZero = 0;
+    private val depthOne = 1
+    private val depthTwo = 2
+    private val depthZero = 0
 
     fun findPerson(personId: Long): Person? {
         return session.load(Person::class.java, personId, depthOne)

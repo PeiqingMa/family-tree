@@ -64,9 +64,11 @@ class Person {
 
     fun addParent(parent: Person, type: String? = null) {
         val parentType = type
-                ?: if (parent.bioGender == Gender.Male) ParentType.BioFather.name
-                else if (parent.bioGender == Gender.Female) ParentType.BioMother.name
-                else ParentType.Unknown.name
+                ?: when (parent.bioGender) {
+                    Gender.Male -> ParentType.BioFather.name
+                    Gender.Female -> ParentType.BioMother.name
+                    else -> ParentType.Unknown.name
+                }
         val relation = ParentRelation().also {
             it.me = this
             it.parent = parent
@@ -76,9 +78,9 @@ class Person {
         if (currentParents.isNullOrEmpty()) {
             this.parents = listOf(relation)
         } else {
-            val theParent = currentParents.filter {
+            val theParent = currentParents.firstOrNull {
                 it.parent?.id != null && it.parent?.id == parent.id
-            }.firstOrNull()
+            }
             if (theParent == null) {
                 this.parents = currentParents + relation
             } else {
@@ -104,9 +106,9 @@ class Person {
         if (currentChildren.isNullOrEmpty()) {
             this.children = listOf(relation)
         } else {
-            val theChild = currentChildren.filter {
+            val theChild = currentChildren.firstOrNull {
                 it.child?.id != null && it.child?.id == child.id
-            }.firstOrNull()
+            }
             if (theChild == null) {
                 this.children = currentChildren + relation
             } else {
@@ -132,9 +134,9 @@ class Person {
         if (currentSpouses.isNullOrEmpty()) {
             this.spouses = listOf(relation)
         } else {
-            val theSpouse = currentSpouses.filter {
+            val theSpouse = currentSpouses.firstOrNull {
                 it.anotherPerson?.id != null && it.anotherPerson?.id == spouse.id
-            }.firstOrNull()
+            }
             if (theSpouse == null) {
                 this.spouses = currentSpouses + relation
             } else {
