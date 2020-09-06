@@ -5,6 +5,7 @@ import io.micronaut.http.annotation.*
 import me.self.familytree.beans.*
 import me.self.familytree.service.FamilyTreeService
 import me.self.familytree.utils.toView
+import me.self.familytree.utils.toViewList
 import javax.inject.Inject
 
 @Controller("/v1")
@@ -26,6 +27,12 @@ class FamilyTreeController(
     @Get("/person/{id:[0-9]+}")
     fun findPersonById(@PathVariable id: Long): PersonView? {
         return familyTreeService.findPerson(id)?.toView()
+    }
+
+    @Get("/persons")
+    fun listPersons(@QueryValue("id") id: Long?): List<PersonView> {
+        val result = familyTreeService.listPersons(id)
+        return result?.toViewList() ?: listOf()
     }
 
     @Post("/person/relation")

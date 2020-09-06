@@ -6,6 +6,7 @@ import io.micronaut.http.client.annotation.Client
 import io.micronaut.runtime.server.EmbeddedServer
 import io.micronaut.test.annotation.MicronautTest
 import me.self.familytree.beans.*
+import me.self.familytree.utils.execute
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import javax.inject.Inject
@@ -86,7 +87,7 @@ class FamilyTreeControllerTest {
     }
 
     @Test
-    fun testAddAsRelation() {
+    fun testAddAsRelationAndList() {
         val firstId = addPerson("Controller First ${System.nanoTime()}")?.id!!
         val anotherPerson = Person().also {
             it.addName("Relation Of")
@@ -101,8 +102,15 @@ class FamilyTreeControllerTest {
         )
         val request = HttpRequestFactory.INSTANCE.post("/v1/person/relation", requestBody)
         val response = client.toBlocking().retrieve(request, PersonView::class.java)
-        assertNotNull(response?.id)
+        val secondId = response?.id
+        assertNotNull(secondId)
         assertTrue(response?.children?.firstOrNull()?.personId == firstId)
+        val request2 = HttpRequestFactory.INSTANCE.get<String>("/v1/persons?id=$firstId")
+        val response2: List<PersonView>? = client.execute(request2)
+        println(response2)
+        assertNotNull(response2)
+        assertTrue(response2!!.size >= 2)
+        assertTrue(response2.map { it.id }.toSet().containsAll(setOf(firstId, secondId)))
     }
 
 }

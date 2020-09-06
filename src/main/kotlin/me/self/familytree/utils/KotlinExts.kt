@@ -30,9 +30,9 @@ fun Person.toViewList(): List<PersonView> {
 private fun traversal(currentPerson: Person, map: MutableMap<Long, PersonView>, list: MutableList<PersonView>) {
     val currentId = currentPerson.id?: return
     if (map.containsKey(currentId)) return
-    currentPerson.parents?.forEach { r-> r.parent?.also { traversal(it, map, list) } }
     val view = currentPerson.toView()
     map[currentId] = view
+    currentPerson.parents?.filter { !map.containsKey(it.parent?.id) }?.forEach { r-> r.parent?.also { traversal(it, map, list) } }
     list.add(view)
     currentPerson.spouses?.mapNotNull {
         when (currentId) {
@@ -40,8 +40,8 @@ private fun traversal(currentPerson: Person, map: MutableMap<Long, PersonView>, 
             it.anotherPerson?.id -> it.currentPerson
             else -> null
         }
-    }?.forEach { traversal(it, map, list) }
-    currentPerson.children?.forEach { r-> r.child?.also { traversal(it, map, list) } }
+    }?.filter { !map.containsKey(it.id) }?.forEach { traversal(it, map, list) }
+    currentPerson.children?.filter { !map.containsKey(it.child?.id) }?.forEach { r-> r.child?.also { traversal(it, map, list) } }
 }
 
 fun ParentRelation.toView(): PersonInRelationView? {

@@ -14,6 +14,10 @@ class FamilyTreeService(
         return familyTreeDao.findPerson(personId)
     }
 
+    fun listPersons(personId: Long?): Person? {
+        return familyTreeDao.listPersons(personId)
+    }
+
     fun addPerson(person: Person): Person? {
         return familyTreeDao.upsertPersonProperties(person)
     }

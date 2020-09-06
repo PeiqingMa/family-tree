@@ -20,4 +20,18 @@ class FamilyTreeDaoTest(private val familyTreeDao: FamilyTreeDao) {
         assertTrue(saved?.names?.firstOrNull() == name)
     }
 
+    @Test
+    fun testListPersons() {
+        val name = "Test ${System.currentTimeMillis()}"
+        val person = Person()
+        person.addName(name)
+        person.bioGender = Gender.Male
+        val saved = familyTreeDao.upsertPerson(person)
+        val id = saved?.id
+        assertNotNull(id)
+        assertTrue(saved?.names?.firstOrNull() == name)
+        val list = familyTreeDao.listPersons(id)
+        assertNotNull(list)
+    }
+
 }

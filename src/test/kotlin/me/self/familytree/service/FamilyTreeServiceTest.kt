@@ -5,6 +5,7 @@ import me.self.familytree.beans.FamilyRelations
 import me.self.familytree.beans.Gender
 import me.self.familytree.beans.Person
 import me.self.familytree.beans.RelationRequest
+import me.self.familytree.utils.toViewList
 import org.junit.jupiter.api.Test
 
 import org.junit.jupiter.api.Assertions.*
@@ -58,5 +59,22 @@ class FamilyTreeServiceTest(private val familyTreeService: FamilyTreeService) {
         val updated = familyTreeService.findPerson(secondPersonId!!)
         assertNotNull(updated)
         assertNull(updated?.children?.firstOrNull())
+    }
+
+    @Test
+    fun testFlatten() {
+        val person1 = Person()
+        person1.id = 1L
+        person1.addName("Aaa")
+        person1.bioGender = Gender.Male
+        val person2 = Person()
+        person2.id = 2L
+        person2.addName("Bbb")
+        person2.bioGender = Gender.Female
+        person1.addParent(person2)
+        person2.addChild(person1)
+        val list = person1.toViewList()
+        println(list)
+        assertTrue(list.size == 2)
     }
 }
