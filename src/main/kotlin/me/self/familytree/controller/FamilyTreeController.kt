@@ -2,10 +2,7 @@ package me.self.familytree.controller
 
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.annotation.*
-import me.self.familytree.beans.FamilyRelations
-import me.self.familytree.beans.Person
-import me.self.familytree.beans.PersonView
-import me.self.familytree.beans.RelationRequest
+import me.self.familytree.beans.*
 import me.self.familytree.service.FamilyTreeService
 import me.self.familytree.utils.toView
 import javax.inject.Inject
@@ -31,16 +28,18 @@ class FamilyTreeController(
         return familyTreeService.findPerson(id)?.toView()
     }
 
+    @Post("/person/relation")
+    fun addPersonAsRelationOf(@Body inputPerson: PersonWithRelationRequest): PersonView? {
+        return familyTreeService.addPersonAsRelationOf(inputPerson)?.toView()
+    }
+
     @Post("/relation")
     fun addRelation(@Body request: RelationRequest): HttpResponse<PersonView?> {
-        if (request.relationType == FamilyRelations.Type.Spouse) {
-            familyTreeService.addSpouse(request.currentId, request.anotherId, request.spouseFrom, request.spouseEnd)
-        } else {
-            if (request.parentType == null || request.childType == null) {
+        if (request.relationType != FamilyRelations.Type.Spouse &&
+                (request.parentType == null || request.childType == null)) {
                 return HttpResponse.badRequest()
-            }
-            familyTreeService.addRelation(request)
         }
+        familyTreeService.addRelation(request)
         val updated = familyTreeService.findPerson(request.currentId)
         return if (updated == null) HttpResponse.badRequest() else HttpResponse.ok(updated.toView())
     }

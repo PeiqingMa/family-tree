@@ -8,7 +8,7 @@ import org.neo4j.ogm.annotation.*
 
 /**
  * JsonIdentityInfo JsonManagedReference and JsonBackReference(in SpouseRelation)
- * is used to solve circular reference problem:
+ * are used to solve circular reference problem:
  * https://www.baeldung.com/jackson-bidirectional-relationships-and-infinite-recursion
  */
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator::class, property = "id")

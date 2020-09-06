@@ -1,8 +1,6 @@
 package me.self.familytree.service
 
-import me.self.familytree.beans.FamilyRelations
-import me.self.familytree.beans.Person
-import me.self.familytree.beans.RelationRequest
+import me.self.familytree.beans.*
 import me.self.familytree.dao.FamilyTreeDao
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -20,20 +18,32 @@ class FamilyTreeService(
         return familyTreeDao.upsertPersonProperties(person)
     }
 
+    fun addPersonAsRelationOf(personRelationRequest: PersonWithRelationRequest): Person? {
+        val createdPerson = familyTreeDao.upsertPerson(personRelationRequest.anotherPerson)?: return null
+        val createdPersonId = createdPerson.id?: return null
+        val currentPerson = familyTreeDao.findPerson(personRelationRequest.currentId)?: return null
+        addRelation(currentPerson, createdPerson, personRelationRequest)
+        return findPerson(createdPersonId)
+    }
+
     fun addRelation(relationRequest: RelationRequest) {
         val currentPerson = familyTreeDao.findPerson(relationRequest.currentId)?: return
         val anotherPerson = familyTreeDao.findPerson(relationRequest.anotherId)?: return
-        when (relationRequest.relationType) {
+        addRelation(currentPerson, anotherPerson, relationRequest)
+    }
+
+    private fun addRelation(currentPerson: Person, anotherPerson: Person, relationInfo: RelationInfo) {
+        when (relationInfo.relationType) {
             FamilyRelations.Type.Parent -> {
-                currentPerson.addParent(anotherPerson, relationRequest.parentType)
-                anotherPerson.addChild(currentPerson, relationRequest.childType)
+                currentPerson.addParent(anotherPerson, relationInfo.parentType)
+                anotherPerson.addChild(currentPerson, relationInfo.childType)
             }
             FamilyRelations.Type.Child -> {
-                currentPerson.addChild(anotherPerson, relationRequest.childType)
-                anotherPerson.addParent(currentPerson, relationRequest.parentType)
+                currentPerson.addChild(anotherPerson, relationInfo.childType)
+                anotherPerson.addParent(currentPerson, relationInfo.parentType)
             }
             FamilyRelations.Type.Spouse -> {
-                currentPerson.addSpouse(anotherPerson)
+                currentPerson.addSpouse(anotherPerson, relationInfo.spouseFrom, relationInfo.spouseEnd)
 //                anotherPerson.addSpouse(currentPerson)
             }
         }
