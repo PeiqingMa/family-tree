@@ -7,7 +7,7 @@ import org.neo4j.ogm.session.SessionFactory
 import javax.inject.Singleton
 
 @Factory
-class TestBeanFactory {
+class BeanFactoryForTest {
 
     /**
      * override me.self.familytree.beans.BeanFactory.sessionFactory
@@ -18,6 +18,11 @@ class TestBeanFactory {
     fun sessionFactory(): SessionFactory {
         val packageName = this::class.qualifiedName?.let { it.substring(0, it.lastIndexOf('.')) }
         return SessionFactory(Configuration.Builder().build(), packageName)
+    }
+
+    @Singleton
+    fun clientConfig(): HttpClientConfigurationForTest {
+        return HttpClientConfigurationForTest()
     }
 
 }
