@@ -1,0 +1,15 @@
+plugins {
+    id "com.github.node-gradle.node" version "2.2.4"
+}
+
+task clean(type: NpmTask) {
+    group = 'clean'
+    description = 'clean the build'
+    args = ['run', 'clean']
+}
+
+task build(type: NpmTask, dependsOn: 'clean') {
+    group = 'build'
+    description = 'Build the web bundle'
+    args = ['run', 'build']
+}
