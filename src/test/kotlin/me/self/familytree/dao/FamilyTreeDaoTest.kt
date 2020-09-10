@@ -20,7 +20,10 @@ class FamilyTreeDaoTest(private val familyTreeDao: FamilyTreeDao) {
         assertTrue(saved?.names?.firstOrNull() == name)
     }
 
-    @Test
+    /**
+     * takes very long time
+     */
+//    @Test
     fun testListPersons() {
         val name = "Test ${System.currentTimeMillis()}"
         val person = Person()
