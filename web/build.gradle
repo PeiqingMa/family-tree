@@ -9,13 +9,13 @@ node {
 //    distBaseUrl = 'https://mirrors.tuna.tsinghua.edu.cn/nodejs-release'
 }
 
-task clean(type: NpmTask) {
+task clean(type: Exec) {
     group = 'clean'
     description = 'clean the build'
-    args = ['run', 'clean']
+    commandLine = ['rm', '-rf', 'build']
 }
 
-task build(type: NpmTask, dependsOn: 'clean') {
+task build(type: NpmTask, dependsOn: ['clean', 'npmInstall']) {
     group = 'build'
     description = 'Build the web bundle'
     args = ['run', 'build']
