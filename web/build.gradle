@@ -2,6 +2,13 @@ plugins {
     id "com.github.node-gradle.node" version "2.2.4"
 }
 
+node {
+    version = '12.18.3'
+    npmVersion = '6.14.6'
+    download = true
+//    distBaseUrl = 'https://mirrors.tuna.tsinghua.edu.cn/nodejs-release'
+}
+
 task clean(type: NpmTask) {
     group = 'clean'
     description = 'clean the build'

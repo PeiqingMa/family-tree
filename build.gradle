@@ -118,6 +118,10 @@ copyWebFiles.doFirst {
     }
 }
 
+build {
+    dependsOn(copyWebFiles)
+}
+
 // https://github.com/GoogleContainerTools/jib/tree/master/jib-gradle-plugin
 jib.to.image = 'gcr.io/family-tree/jib-image'
 
