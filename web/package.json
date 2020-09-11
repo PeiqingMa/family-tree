@@ -1,6 +1,7 @@
 {
-  "name": "web",
+  "name": "family-tree-web",
   "version": "0.1.0",
+  "proxy": "http://localhost:8080",
   "license": "Apache-2.0",
   "dependencies": {
     "@testing-library/jest-dom": "^4.2.4",
