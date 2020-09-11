@@ -117,6 +117,7 @@ copyWebFiles.doFirst {
         into("${project.buildDir}/resources/main/public")
     }
 }
+jar.mustRunAfter(copyWebFiles)
 
 build {
     dependsOn(copyWebFiles)
