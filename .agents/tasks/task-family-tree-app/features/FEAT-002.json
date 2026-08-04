@@ -2,7 +2,7 @@
   "id": "FEAT-002",
   "type": "feat",
   "description": "Implement the React frontend with Vite, featuring a table view of all people (with click to show details), a graph view using React Flow to visualize the family tree, and forms to add/edit people and relations. The frontend calls the Express API from FEAT-001.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Create client/ directory with Vite + React + TypeScript setup: package.json with dependencies (react, react-dom, react-router-dom, @xyflow/react for graph visualization, axios for API calls), vite.config.ts with proxy to localhost:3001 for /api",
     "Create client/src/types.ts - Shared TypeScript interfaces matching the server models (Person, PersonName, Relation, TreeNode, GraphData)",
@@ -37,5 +37,5 @@
     "Run `cd /projects/sandbox/family-tree && npm test --workspace=server` still passes all tests"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "All verification steps passed. Client build produces dist/ with ~436KB JS bundle. Server build and all 24 tests still pass. Used @xyflow/react v12 with ReactFlow component. The tsconfig.tsbuildinfo is generated during tsc -b build step. react-router-dom v7 used (latest). Vite proxy configured for /api to localhost:3001."
 }
