@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "type": "feat",
   "description": "Set up project structure and implement the complete backend REST API with SQLite database. Remove all existing Kotlin/Gradle/Neo4j code. Create a new Node.js/Express API server with SQLite (via better-sqlite3 and knex), implementing all endpoints from Specs.md: CRUD for persons, relation management, and ancestor/offspring traversal.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Remove all existing source files (src/, web/, gradle files, build.gradle, settings.gradle, gradlew, etc.). Keep only README.md, LICENSE, and Specs.md as references.",
     "Create root package.json with npm workspaces pointing to server/ and client/",
@@ -37,5 +37,5 @@
     "Run `cd /projects/sandbox/family-tree && npm test --workspace=server` and confirm all tests pass"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "All 24 integration tests pass. Build compiles without errors. Used in-memory SQLite for tests. Knex with better-sqlite3 works well. The client/ workspace has a placeholder package.json for the workspace to resolve correctly. Package-lock.json generated with 474 packages."
 }
