@@ -1,6 +1,8 @@
-import type { Person, PersonName, GraphNode, RelationPerson } from './types';
+import type { Person, PersonName, GraphNode, RelationPerson, TreeNode } from './types';
 
-export function getDisplayName(person: Person | GraphNode | RelationPerson): string {
+type Displayable = Person | GraphNode | RelationPerson | TreeNode;
+
+export function getDisplayName(person: Displayable): string {
   if (!person.names || person.names.length === 0) return 'Unknown';
   const name = person.names[0];
   if (name.fullName) return name.fullName;

@@ -4,7 +4,7 @@ import type { Person, CreatePersonData } from '../types';
 import { getDisplayName } from '../utils';
 
 interface RelationFormProps {
-  personId: number;
+  personId: string;
   onSuccess: () => void;
 }
 
@@ -14,7 +14,7 @@ const childSubTypes = ['Bio', 'Adopted'];
 function RelationForm({ personId, onSuccess }: RelationFormProps) {
   const [persons, setPersons] = useState<Person[]>([]);
   const [relationType, setRelationType] = useState('parent');
-  const [selectedPersonId, setSelectedPersonId] = useState<number | ''>('');
+  const [selectedPersonId, setSelectedPersonId] = useState<string>('');
   const [subType, setSubType] = useState('');
   const [spouseFrom, setSpouseFrom] = useState('');
   const [spouseEnd, setSpouseEnd] = useState('');
@@ -54,17 +54,17 @@ function RelationForm({ personId, onSuccess }: RelationFormProps) {
         // For parent relation: fromPersonId is the child (current person), toPersonId is the parent (selected person)
         // For child relation: fromPersonId is the parent (current person), toPersonId is the child (selected person)
         // For spouse relation: bidirectional
-        let fromId: number;
-        let toId: number;
+        let fromId: string;
+        let toId: string;
         if (relationType === 'parent') {
           fromId = personId;
-          toId = Number(selectedPersonId);
+          toId = selectedPersonId;
         } else if (relationType === 'child') {
           fromId = personId;
-          toId = Number(selectedPersonId);
+          toId = selectedPersonId;
         } else {
           fromId = personId;
-          toId = Number(selectedPersonId);
+          toId = selectedPersonId;
         }
         await createRelation({
           fromPersonId: fromId,
@@ -160,7 +160,7 @@ function RelationForm({ personId, onSuccess }: RelationFormProps) {
       ) : (
         <div className="form-group">
           <label>Select Person</label>
-          <select value={selectedPersonId} onChange={(e) => setSelectedPersonId(Number(e.target.value))}>
+          <select value={selectedPersonId} onChange={(e) => setSelectedPersonId(e.target.value)}>
             <option value="">-- Select a person --</option>
             {availablePersons.map((p) => (
               <option key={p.id} value={p.id}>{getDisplayName(p)}</option>

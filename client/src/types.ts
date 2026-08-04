@@ -1,16 +1,16 @@
 export interface PersonName {
-  id?: number;
-  personId?: number;
+  id?: string;
+  personId?: string;
   familyName: string;
   givenName: string;
   middleName?: string;
   fullName?: string;
   nameType?: string;
-  nameOrder?: number;
+  nameOrder?: string;
 }
 
 export interface Person {
-  id: number;
+  id: string;
   names: PersonName[];
   bioGender?: string;
   socialGender?: string;
@@ -23,13 +23,13 @@ export interface Person {
 }
 
 export interface RelationPerson {
-  id: number;
+  id: string;
   names: PersonName[];
   bioGender?: string;
 }
 
 export interface RelationView {
-  relationId: number;
+  relationId: string;
   person: RelationPerson;
   relationType: string;
   subType?: string;
@@ -44,15 +44,15 @@ export interface PersonDetail extends Person {
 }
 
 export interface TreeNode {
-  id: number;
+  id: string;
   names: PersonName[];
   bioGender?: string;
-  parents?: TreeNode[];
-  children?: TreeNode[];
+  ancestors?: TreeNode[];
+  descendants?: TreeNode[];
 }
 
 export interface GraphNode {
-  id: number;
+  id: string;
   names: PersonName[];
   bioGender?: string;
   lifeFrom?: string;
@@ -60,9 +60,9 @@ export interface GraphNode {
 }
 
 export interface GraphEdge {
-  id: number;
-  fromPersonId: number;
-  toPersonId: number;
+  id: string;
+  fromPersonId: string;
+  toPersonId: string;
   relationType: string;
   subType?: string;
   spouseFrom?: string;
@@ -87,8 +87,8 @@ export interface CreatePersonData {
 }
 
 export interface CreateRelationData {
-  fromPersonId: number;
-  toPersonId: number;
+  fromPersonId: string;
+  toPersonId: string;
   relationType: string;
   subType?: string;
   spouseFrom?: string;
@@ -96,7 +96,7 @@ export interface CreateRelationData {
 }
 
 export interface CreateRelationWithPersonData {
-  existingPersonId: number;
+  existingPersonId: string;
   newPerson: CreatePersonData;
   relationType: string;
   subType?: string;

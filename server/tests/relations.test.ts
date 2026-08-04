@@ -122,6 +122,29 @@ describe('Relations API', () => {
     expect(response.status).toBe(400);
   });
 
+  it('POST /api/relations - should return 409 for duplicate relation', async () => {
+    // Create a relation
+    const first = await request(app)
+      .post('/api/relations')
+      .send({
+        fromPersonId: personBId,
+        toPersonId: personAId,
+        relationType: 'spouse',
+      });
+    expect(first.status).toBe(201);
+
+    // Try to create the same relation again
+    const duplicate = await request(app)
+      .post('/api/relations')
+      .send({
+        fromPersonId: personBId,
+        toPersonId: personAId,
+        relationType: 'spouse',
+      });
+    expect(duplicate.status).toBe(409);
+    expect(duplicate.body.error).toBe('This relation already exists');
+  });
+
   it('GET /api/persons/:id - should return person with relations populated', async () => {
     const response = await request(app).get(`/api/persons/${personCId}`);
 

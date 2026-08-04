@@ -84,7 +84,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       const relationView: RelationView = {
         relationId: rel.id,
         person: personSummary,
-        relationType: rel.relation_type,
+        relationType: relationType,
         subType: rel.sub_type || undefined,
         spouseFrom: rel.spouse_from || undefined,
         spouseEnd: rel.spouse_end || undefined,
@@ -128,6 +128,18 @@ router.post('/', async (req: Request, res: Response) => {
   try {
     const db = getDb();
     const body: PersonCreate = req.body;
+
+    // Validate that at least one name with givenName or familyName is provided
+    if (!body.names || !Array.isArray(body.names) || body.names.length === 0) {
+      return res.status(400).json({ error: 'At least one name is required' });
+    }
+    const hasValidName = body.names.some(
+      (n) => (n.givenName && n.givenName.trim() !== '') || (n.familyName && n.familyName.trim() !== '')
+    );
+    if (!hasValidName) {
+      return res.status(400).json({ error: 'At least one name must have a givenName or familyName' });
+    }
+
     const personId = uuidv4();
     const now = new Date().toISOString();
 

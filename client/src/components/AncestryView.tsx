@@ -26,11 +26,11 @@ function AncestryView() {
     if (!id) return;
     setLoading(true);
 
-    Promise.all([getAncestors(Number(id)), getDescendants(Number(id))])
+    Promise.all([getAncestors(id!), getDescendants(id!)])
       .then(([ancestorTree, descendantTree]) => {
         const flowNodes: Node[] = [];
         const flowEdges: Edge[] = [];
-        const addedNodes = new Set<number>();
+        const addedNodes = new Set<string>();
 
         setPersonName(getDisplayName(ancestorTree));
 
@@ -39,7 +39,7 @@ function AncestryView() {
           if (addedNodes.has(node.id)) return;
           addedNodes.add(node.id);
 
-          const isRoot = node.id === Number(id);
+          const isRoot = node.id === id;
           flowNodes.push({
             id: String(node.id),
             position: { x, y },
@@ -54,10 +54,10 @@ function AncestryView() {
             },
           });
 
-          if (node.parents) {
+          if (node.ancestors) {
             const spacing = Math.max(200, 300 / (level + 1));
-            const startX = x - ((node.parents.length - 1) * spacing) / 2;
-            node.parents.forEach((parent, idx) => {
+            const startX = x - ((node.ancestors.length - 1) * spacing) / 2;
+            node.ancestors.forEach((parent, idx) => {
               const px = startX + idx * spacing;
               const py = y - 150;
 
@@ -77,7 +77,7 @@ function AncestryView() {
         function processDescendants(node: TreeNode, x: number, y: number, level: number) {
           if (!addedNodes.has(node.id)) {
             addedNodes.add(node.id);
-            const isRoot = node.id === Number(id);
+            const isRoot = node.id === id;
             flowNodes.push({
               id: String(node.id),
               position: { x, y },
@@ -93,10 +93,10 @@ function AncestryView() {
             });
           }
 
-          if (node.children) {
+          if (node.descendants) {
             const spacing = Math.max(200, 300 / (level + 1));
-            const startX = x - ((node.children.length - 1) * spacing) / 2;
-            node.children.forEach((child, idx) => {
+            const startX = x - ((node.descendants.length - 1) * spacing) / 2;
+            node.descendants.forEach((child, idx) => {
               const cx = startX + idx * spacing;
               const cy = y + 150;
 

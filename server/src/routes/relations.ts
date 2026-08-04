@@ -27,6 +27,17 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid relation type. Must be parent, child, or spouse.' });
     }
 
+    // Check for duplicate relation
+    const existingRelation = await db('relations')
+      .where('from_person_id', body.fromPersonId)
+      .andWhere('to_person_id', body.toPersonId)
+      .andWhere('relation_type', body.relationType)
+      .first();
+
+    if (existingRelation) {
+      return res.status(409).json({ error: 'This relation already exists' });
+    }
+
     const relationId = uuidv4();
     const now = new Date().toISOString();
 

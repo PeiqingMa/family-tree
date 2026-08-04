@@ -9,11 +9,11 @@ interface NameEntry {
   middleName: string;
   fullName: string;
   nameType: string;
-  nameOrder: number;
+  nameOrder: string;
 }
 
-function emptyName(order: number): NameEntry {
-  return { familyName: '', givenName: '', middleName: '', fullName: '', nameType: '', nameOrder: order };
+function emptyName(): NameEntry {
+  return { familyName: '', givenName: '', middleName: '', fullName: '', nameType: '', nameOrder: 'FamilyNameFirst' };
 }
 
 function PersonForm() {
@@ -21,7 +21,7 @@ function PersonForm() {
   const navigate = useNavigate();
   const isEdit = !!id;
 
-  const [names, setNames] = useState<NameEntry[]>([emptyName(0)]);
+  const [names, setNames] = useState<NameEntry[]>([emptyName()]);
   const [bioGender, setBioGender] = useState('');
   const [socialGender, setSocialGender] = useState('');
   const [lifeFrom, setLifeFrom] = useState('');
@@ -36,17 +36,17 @@ function PersonForm() {
   useEffect(() => {
     if (isEdit) {
       setLoading(true);
-      getPerson(Number(id))
+      getPerson(id!)
         .then((person) => {
           if (person.names.length > 0) {
             setNames(
-              person.names.map((n: PersonName, idx: number) => ({
+              person.names.map((n: PersonName) => ({
                 familyName: n.familyName || '',
                 givenName: n.givenName || '',
                 middleName: n.middleName || '',
                 fullName: n.fullName || '',
                 nameType: n.nameType || '',
-                nameOrder: n.nameOrder ?? idx,
+                nameOrder: n.nameOrder || 'FamilyNameFirst',
               }))
             );
           }
@@ -66,15 +66,11 @@ function PersonForm() {
 
   const handleNameChange = (index: number, field: keyof NameEntry, value: string) => {
     const updated = [...names];
-    if (field === 'nameOrder') {
-      updated[index][field] = Number(value);
-    } else {
-      updated[index][field] = value;
-    }
+    updated[index][field] = value;
     setNames(updated);
   };
 
-  const addName = () => setNames([...names, emptyName(names.length)]);
+  const addName = () => setNames([...names, emptyName()]);
   const removeName = (index: number) => {
     if (names.length <= 1) return;
     setNames(names.filter((_, i) => i !== index));
@@ -113,7 +109,7 @@ function PersonForm() {
 
     try {
       if (isEdit) {
-        await updatePerson(Number(id), data);
+        await updatePerson(id!, data);
         navigate(`/persons/${id}`);
       } else {
         const created = await createPerson(data);

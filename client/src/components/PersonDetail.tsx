@@ -16,7 +16,7 @@ function PersonDetail() {
   const loadPerson = () => {
     if (!id) return;
     setLoading(true);
-    getPerson(Number(id))
+    getPerson(id!)
       .then(setPerson)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -37,7 +37,7 @@ function PersonDetail() {
     }
   };
 
-  const handleDeleteRelation = async (relationId: number) => {
+  const handleDeleteRelation = async (relationId: string) => {
     if (!window.confirm('Remove this relation?')) return;
     try {
       await deleteRelation(relationId);

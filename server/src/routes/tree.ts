@@ -102,14 +102,24 @@ async function buildAncestorTree(personId: string, visited: Set<string>): Promis
 
   const names = await db('person_names').where('person_id', personId);
 
-  // Find parent relations where this person is the "from" (child) side
+  // Find parents via both directions:
+  // 1. from_person_id = current person, relation_type = 'parent' (this person declared a parent)
+  // 2. to_person_id = current person, relation_type = 'child' (someone declared this person as their child)
   const parentRelations = await db('relations')
-    .where('from_person_id', personId)
-    .andWhere('relation_type', 'parent');
+    .where(function () {
+      this.where('from_person_id', personId).andWhere('relation_type', 'parent');
+    })
+    .orWhere(function () {
+      this.where('to_person_id', personId).andWhere('relation_type', 'child');
+    });
 
+  const ancestorIds = new Set<string>();
   const ancestors: TreeNode[] = [];
   for (const rel of parentRelations) {
-    const ancestor = await buildAncestorTree(rel.to_person_id, visited);
+    const ancestorId = rel.from_person_id === personId ? rel.to_person_id : rel.from_person_id;
+    if (ancestorIds.has(ancestorId)) continue;
+    ancestorIds.add(ancestorId);
+    const ancestor = await buildAncestorTree(ancestorId, visited);
     if (ancestor) {
       ancestors.push(ancestor);
     }
@@ -138,14 +148,24 @@ async function buildDescendantTree(personId: string, visited: Set<string>): Prom
 
   const names = await db('person_names').where('person_id', personId);
 
-  // Find child relations where this person is the "from" (parent) side
+  // Find children via both directions:
+  // 1. from_person_id = current person, relation_type = 'child' (this person declared a child)
+  // 2. to_person_id = current person, relation_type = 'parent' (someone declared this person as their parent)
   const childRelations = await db('relations')
-    .where('from_person_id', personId)
-    .andWhere('relation_type', 'child');
+    .where(function () {
+      this.where('from_person_id', personId).andWhere('relation_type', 'child');
+    })
+    .orWhere(function () {
+      this.where('to_person_id', personId).andWhere('relation_type', 'parent');
+    });
 
+  const descendantIds = new Set<string>();
   const descendants: TreeNode[] = [];
   for (const rel of childRelations) {
-    const descendant = await buildDescendantTree(rel.to_person_id, visited);
+    const descendantId = rel.from_person_id === personId ? rel.to_person_id : rel.from_person_id;
+    if (descendantIds.has(descendantId)) continue;
+    descendantIds.add(descendantId);
+    const descendant = await buildDescendantTree(descendantId, visited);
     if (descendant) {
       descendants.push(descendant);
     }

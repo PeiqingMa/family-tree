@@ -18,7 +18,7 @@ export async function getPersons(): Promise<Person[]> {
   return res.data;
 }
 
-export async function getPerson(id: number): Promise<PersonDetail> {
+export async function getPerson(id: string): Promise<PersonDetail> {
   const res = await api.get(`/persons/${id}`);
   return res.data;
 }
@@ -28,35 +28,35 @@ export async function createPerson(data: CreatePersonData): Promise<Person> {
   return res.data;
 }
 
-export async function updatePerson(id: number, data: CreatePersonData): Promise<Person> {
+export async function updatePerson(id: string, data: CreatePersonData): Promise<Person> {
   const res = await api.put(`/persons/${id}`, data);
   return res.data;
 }
 
-export async function deletePerson(id: number): Promise<void> {
+export async function deletePerson(id: string): Promise<void> {
   await api.delete(`/persons/${id}`);
 }
 
-export async function createRelation(data: CreateRelationData): Promise<{ id: number }> {
+export async function createRelation(data: CreateRelationData): Promise<{ id: string }> {
   const res = await api.post('/relations', data);
   return res.data;
 }
 
-export async function createRelationWithPerson(data: CreateRelationWithPersonData): Promise<{ relation: { id: number }; person: Person }> {
+export async function createRelationWithPerson(data: CreateRelationWithPersonData): Promise<{ relation: { id: string }; person: Person }> {
   const res = await api.post('/relations/with-person', data);
   return res.data;
 }
 
-export async function deleteRelation(id: number): Promise<void> {
+export async function deleteRelation(id: string): Promise<void> {
   await api.delete(`/relations/${id}`);
 }
 
-export async function getAncestors(id: number): Promise<TreeNode> {
+export async function getAncestors(id: string): Promise<TreeNode> {
   const res = await api.get(`/tree/ancestors/${id}`);
   return res.data;
 }
 
-export async function getDescendants(id: number): Promise<TreeNode> {
+export async function getDescendants(id: string): Promise<TreeNode> {
   const res = await api.get(`/tree/descendants/${id}`);
   return res.data;
 }

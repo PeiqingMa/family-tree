@@ -116,6 +116,33 @@ describe('Persons API', () => {
     expect(response.body.names[0].familyName).toBe('Doe');
   });
 
+  it('POST /api/persons - should return 400 when no names provided', async () => {
+    const response = await request(app)
+      .post('/api/persons')
+      .send({});
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('At least one name is required');
+  });
+
+  it('POST /api/persons - should return 400 when names array is empty', async () => {
+    const response = await request(app)
+      .post('/api/persons')
+      .send({ names: [] });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('At least one name is required');
+  });
+
+  it('POST /api/persons - should return 400 when names have no givenName or familyName', async () => {
+    const response = await request(app)
+      .post('/api/persons')
+      .send({ names: [{ middleName: 'Only' }] });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('At least one name must have a givenName or familyName');
+  });
+
   it('DELETE /api/persons/:id - should delete a person', async () => {
     // Create a person to delete
     const createRes = await request(app)
