@@ -20,12 +20,14 @@ app.use('/api/relations', relationsRouter);
 app.use('/api/tree', treeRouter);
 
 // Serve static files in production
-const clientBuildPath = path.join(__dirname, '..', '..', 'client', 'dist');
-app.use(express.static(clientBuildPath));
+if (process.env.NODE_ENV === 'production') {
+  const clientBuildPath = path.join(__dirname, '..', '..', 'client', 'dist');
+  app.use(express.static(clientBuildPath));
 
-// Fallback for SPA routing (in production)
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(clientBuildPath, 'index.html'));
-});
+  // Fallback for SPA routing (in production)
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(clientBuildPath, 'index.html'));
+  });
+}
 
 export default app;
