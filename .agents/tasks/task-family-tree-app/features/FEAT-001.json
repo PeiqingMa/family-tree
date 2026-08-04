@@ -1,0 +1,41 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Set up project structure and implement the complete backend REST API with SQLite database. Remove all existing Kotlin/Gradle/Neo4j code. Create a new Node.js/Express API server with SQLite (via better-sqlite3 and knex), implementing all endpoints from Specs.md: CRUD for persons, relation management, and ancestor/offspring traversal.",
+  "status": "completed",
+  "steps": [
+    "Remove all existing source files (src/, web/, gradle files, build.gradle, settings.gradle, gradlew, etc.). Keep only README.md, LICENSE, and Specs.md as references.",
+    "Create root package.json with npm workspaces pointing to server/ and client/",
+    "Create server/ directory with its own package.json, tsconfig.json",
+    "Install server dependencies: express, better-sqlite3, knex, cors, uuid, and dev deps: typescript, @types/express, @types/better-sqlite3, @types/cors, ts-node, nodemon, jest, ts-jest, @types/jest, supertest, @types/supertest",
+    "Create server/src/database.ts - Knex configuration for SQLite with migrations inline. Tables: persons (id TEXT PRIMARY KEY, bio_gender TEXT, social_gender TEXT, life_from TEXT, life_end TEXT, birth_place TEXT, death_place TEXT, details TEXT, photos TEXT as JSON array, created_at TEXT, updated_at TEXT), person_names (id TEXT PRIMARY KEY, person_id TEXT FK, family_name TEXT, given_name TEXT, middle_name TEXT, full_name TEXT, name_type TEXT, name_order TEXT DEFAULT 'FamilyNameFirst'), relations (id TEXT PRIMARY KEY, from_person_id TEXT FK, to_person_id TEXT FK, relation_type TEXT CHECK IN ('parent','child','spouse'), sub_type TEXT, spouse_from TEXT, spouse_end TEXT, created_at TEXT)",
+    "Create server/src/models/person.ts - TypeScript interfaces for Person, PersonName, PersonCreate, PersonUpdate matching the fields from Person.kt",
+    "Create server/src/models/relation.ts - TypeScript interfaces for Relation, RelationCreate matching FamilyRelations.kt enums (ParentType: BioFather, BioMother, FosterFather, FosterMother, Unknown; ChildType: Bio, Adopted; SpouseRelation with spouseFrom, spouseEnd)",
+    "Create server/src/routes/persons.ts - Express router with endpoints: GET /api/persons (list all with names), GET /api/persons/:id (full detail with relations), POST /api/persons (create), PUT /api/persons/:id (update properties), DELETE /api/persons/:id (delete person and their relations)",
+    "Create server/src/routes/relations.ts - Express router with endpoints: POST /api/relations (create relation between two existing persons), POST /api/relations/with-person (create a new person and relate them to an existing person), DELETE /api/relations/:id (remove a relation)",
+    "Create server/src/routes/tree.ts - Express router with endpoints: GET /api/tree/ancestors/:id (recursive ancestor traversal), GET /api/tree/descendants/:id (recursive descendant traversal), GET /api/tree/graph (return all persons and relations formatted for graph rendering)",
+    "Create server/src/app.ts - Express app setup with CORS, JSON body parsing, static file serving for production, route mounting",
+    "Create server/src/index.ts - Server entry point, initialize database then start listening on port 3001",
+    "Create server/tests/persons.test.ts - Integration tests using supertest: test create person, get person, update person, delete person, list persons",
+    "Create server/tests/relations.test.ts - Integration tests: test create parent/child/spouse relations, get person with relations populated, delete relation, ancestor/descendant traversal",
+    "Add scripts to server/package.json: dev (nodemon), build (tsc), start (node dist/index.js), test (jest)"
+  ],
+  "acceptance_criteria": [
+    "Running `npm install` at project root succeeds",
+    "Running `npm run build --workspace=server` compiles TypeScript without errors",
+    "Running `npm test --workspace=server` passes all integration tests",
+    "POST /api/persons creates a person and returns it with an ID",
+    "GET /api/persons/:id returns person with names and relations populated",
+    "POST /api/relations creates a relation between two persons",
+    "GET /api/tree/ancestors/:id returns recursive ancestors",
+    "GET /api/tree/descendants/:id returns recursive descendants",
+    "DELETE /api/persons/:id removes person and associated relations"
+  ],
+  "verification": [
+    "Run `cd /projects/sandbox/family-tree && npm install` and confirm exit code 0",
+    "Run `cd /projects/sandbox/family-tree && npm run build --workspace=server` and confirm exit code 0",
+    "Run `cd /projects/sandbox/family-tree && npm test --workspace=server` and confirm all tests pass"
+  ],
+  "blocked_reason": null,
+  "findings": "All 24 integration tests pass. Build compiles without errors. Used in-memory SQLite for tests. Knex with better-sqlite3 works well. The client/ workspace has a placeholder package.json for the workspace to resolve correctly. Package-lock.json generated with 474 packages."
+}

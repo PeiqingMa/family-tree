@@ -1,0 +1,22 @@
+{
+  "project_type": "Full-stack web application: Node.js/Express REST API + React/TypeScript SPA with SQLite database",
+  "language": "TypeScript (both backend and frontend)",
+  "build_system": "npm workspaces - server/ and client/ directories",
+  "test_framework": "Jest for backend API tests, React Testing Library for frontend",
+  "build_command": "cd /projects/sandbox/family-tree && npm run build --workspace=server && npm run build --workspace=client",
+  "test_command": "cd /projects/sandbox/family-tree && npm test --workspace=server",
+  "verification_instructions": "1. Run npm install at root. 2. Run npm run build in server/. 3. Run npm test in server/. 4. Run npm run build in client/.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "npm install at project root installs all workspace dependencies",
+  "environment_constraints": "OPEN_INTERNET - full network access available. Node.js 22 pre-installed. Can install any npm packages.",
+  "contribution_requirements": "Complete replacement of existing repo. New branch for PR.",
+  "key_patterns": "Replacing entire codebase. New patterns: Express route handlers with controller pattern, Knex.js for SQLite queries, React functional components with hooks, React Flow for graph visualization.",
+  "relevant_files": [
+    "src/main/kotlin/me/self/familytree/beans/Person.kt - data model reference for Person fields",
+    "src/main/kotlin/me/self/familytree/beans/FamilyRelations.kt - data model reference for relation types",
+    "src/main/kotlin/me/self/familytree/beans/RelationRequest.kt - API request shapes",
+    "src/main/kotlin/me/self/familytree/beans/PersonView.kt - API response shapes",
+    "Specs.md - endpoint specifications"
+  ],
+  "directory_structure": "New structure: server/ (Express API with SQLite), client/ (React SPA with Vite), package.json (workspace root)"
+}

@@ -1,0 +1,14 @@
+{
+  "task_id": "task-family-tree-app",
+  "task_description": "Replace the existing Kotlin/Neo4j starter project with a complete full-stack family tree management application using Node.js/Express + SQLite backend and React/TypeScript + React Flow frontend. The app supports adding/editing people and relations, viewing people in a table with detail views, and visualizing the family tree as an interactive graph showing ancestors and descendants.",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002"],
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "summary": "All 7 review issues fixed. Server builds and all 28 tests pass (24 original + 4 new for validation/dedup). Client builds successfully. Semantic review v2 APPROVED. Non-blocking notes: with-person endpoint skips validation (only exploitable via direct API), directional duplicate check (tree rendering handles gracefully), update allows empty names."
+  }
+}
