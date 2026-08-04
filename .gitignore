@@ -1,13 +1,22 @@
-Thumbs.db
+node_modules/
+dist/
+*.js.map
+*.d.ts
+!jest.config.ts
+
+# Database files
+server/data/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
 .DS_Store
-.gradle
-build/
-target/
-out/
-.idea
-*.iml
-*.ipr
-*.iws
-.project
-.settings
-.classpath
+Thumbs.db
+
+# Environment
+.env
+.env.local

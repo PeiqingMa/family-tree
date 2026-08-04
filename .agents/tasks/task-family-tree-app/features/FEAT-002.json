@@ -1,0 +1,41 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Implement the React frontend with Vite, featuring a table view of all people (with click to show details), a graph view using React Flow to visualize the family tree, and forms to add/edit people and relations. The frontend calls the Express API from FEAT-001.",
+  "status": "pending",
+  "steps": [
+    "Create client/ directory with Vite + React + TypeScript setup: package.json with dependencies (react, react-dom, react-router-dom, @xyflow/react for graph visualization, axios for API calls), vite.config.ts with proxy to localhost:3001 for /api",
+    "Create client/src/types.ts - Shared TypeScript interfaces matching the server models (Person, PersonName, Relation, TreeNode, GraphData)",
+    "Create client/src/api.ts - API client module with functions: getPersons(), getPerson(id), createPerson(data), updatePerson(id, data), deletePerson(id), createRelation(data), createRelationWithPerson(data), deleteRelation(id), getAncestors(id), getDescendants(id), getGraph()",
+    "Create client/src/components/Layout.tsx - Main layout with navigation tabs: Table View, Graph View, and an Add Person button",
+    "Create client/src/components/PersonTable.tsx - Table displaying all people with columns: Name (full name from first name entry), Gender, Birth Date, Death Date, Birth Place. Clicking a row navigates to person detail view.",
+    "Create client/src/components/PersonDetail.tsx - Detail view showing all person fields, their names list, and relation lists (parents, children, spouses) with links to related persons. Include Edit and Delete buttons. Show an 'Add Relation' button that opens a form to connect this person to another.",
+    "Create client/src/components/PersonForm.tsx - Form for creating/editing a person: fields for names (dynamic list with add/remove), bioGender (dropdown: Male, Female, Other, Unknown), socialGender (text), lifeFrom, lifeEnd (date inputs), birthPlace, deathPlace (text), details (textarea), photos (URL list with add/remove). Used for both create and edit modes.",
+    "Create client/src/components/RelationForm.tsx - Form for creating a relation: select relation type (parent/child/spouse), search/select the other person from existing persons list, set sub-type based on relation type (ParentType dropdown for parent, ChildType dropdown for child, date fields for spouse). Also option to create a new person inline as the related person.",
+    "Create client/src/components/GraphView.tsx - React Flow based graph visualization: fetch all persons and relations from GET /api/tree/graph, render persons as nodes (showing name and birth year), render relations as edges (color-coded: blue for parent-child, red for spouse). Clicking a node shows that person's ancestors and descendants highlighted. The graph should be pannable and zoomable (built into React Flow).",
+    "Create client/src/components/AncestryView.tsx - When a person is clicked in graph view, show a focused tree of their ancestors (going up) and descendants (going down) using a vertical layout in React Flow.",
+    "Create client/src/App.tsx - React Router setup with routes: / (table view), /persons/new (create form), /persons/:id (detail), /persons/:id/edit (edit form), /graph (graph view)",
+    "Create client/index.html - Vite entry HTML file",
+    "Create client/src/main.tsx - React app entry point with BrowserRouter",
+    "Style the application with a clean CSS file (client/src/index.css) - use a minimal modern design with a sidebar nav, responsive table, and good spacing. No external CSS framework needed.",
+    "Update server/src/app.ts to serve the client/dist/ directory as static files in production (when NODE_ENV=production), so the entire app can run from a single server"
+  ],
+  "acceptance_criteria": [
+    "Running `npm run build --workspace=client` compiles without errors",
+    "The table view at / lists all persons fetched from the API",
+    "Clicking a person in the table shows their detail view with all fields and relations",
+    "The person form allows creating a new person with multiple names",
+    "The relation form allows connecting two existing persons",
+    "The graph view at /graph renders persons as nodes and relations as edges using React Flow",
+    "Clicking a node in the graph shows ancestors and descendants",
+    "The graph is pannable and zoomable",
+    "The Vite dev server proxies /api requests to the Express backend"
+  ],
+  "verification": [
+    "Run `cd /projects/sandbox/family-tree && npm run build --workspace=client` and confirm exit code 0",
+    "Run `cd /projects/sandbox/family-tree && npm run build --workspace=server` still passes (server changes for static serving)",
+    "Run `cd /projects/sandbox/family-tree && npm test --workspace=server` still passes all tests"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

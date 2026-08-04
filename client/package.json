@@ -1,0 +1,10 @@
+{
+  "name": "family-tree-client",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'Client not yet set up'",
+    "build": "echo 'Client not yet set up'",
+    "test": "echo 'No tests yet'"
+  }
+}

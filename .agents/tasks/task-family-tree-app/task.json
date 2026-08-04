@@ -1,0 +1,7 @@
+{
+  "task_id": "task-family-tree-app",
+  "task_description": "Replace the existing Kotlin/Neo4j starter project with a complete full-stack family tree management application using Node.js/Express + SQLite backend and React/TypeScript + React Flow frontend. The app supports adding/editing people and relations, viewing people in a table with detail views, and visualizing the family tree as an interactive graph showing ancestors and descendants.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002"],
+  "blocked_reason": null
+}
