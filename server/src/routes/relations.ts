@@ -2,11 +2,12 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb } from '../database';
 import { Relation, RelationCreate, RelationWithPersonCreate } from '../models/relation';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
 
 // POST /api/relations - create a relation between two existing persons
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', requireAuth, async (req: Request, res: Response) => {
   try {
     const db = getDb();
     const body: RelationCreate = req.body;
@@ -70,7 +71,7 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // POST /api/relations/with-person - create a new person and relate them to an existing person
-router.post('/with-person', async (req: Request, res: Response) => {
+router.post('/with-person', requireAuth, async (req: Request, res: Response) => {
   try {
     const db = getDb();
     const body: RelationWithPersonCreate = req.body;
@@ -177,7 +178,7 @@ router.post('/with-person', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/relations/:id - remove a relation
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const db = getDb();
     const relation = await db('relations').where('id', req.params.id).first();

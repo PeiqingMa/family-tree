@@ -1,0 +1,138 @@
+{
+  "nav": {
+    "familyTree": "Family Tree",
+    "tableView": "Table View",
+    "graphView": "Graph View",
+    "addPerson": "+ Add Person"
+  },
+  "table": {
+    "title": "All People",
+    "total": "total",
+    "emptyState": "No people added yet. Click \"Add Person\" to get started.",
+    "name": "Name",
+    "gender": "Gender",
+    "birthDate": "Birth Date",
+    "deathDate": "Death Date",
+    "birthPlace": "Birth Place"
+  },
+  "graph": {
+    "title": "Family Graph",
+    "emptyState": "No people added yet. Add some people to see the graph.",
+    "backToGraph": "Back to Graph",
+    "viewDetails": "View Details"
+  },
+  "person": {
+    "editPerson": "Edit Person",
+    "addPerson": "Add Person",
+    "basicInfo": "Basic Info",
+    "names": "Names",
+    "photos": "Photos",
+    "details": "Details",
+    "parents": "Parents",
+    "children": "Children",
+    "spouses": "Spouses",
+    "edit": "Edit",
+    "delete": "Delete",
+    "saveChanges": "Save Changes",
+    "createPerson": "Create Person",
+    "cancel": "Cancel",
+    "notFound": "Person not found",
+    "noNames": "No names recorded.",
+    "noParents": "No parents recorded.",
+    "noChildren": "No children recorded.",
+    "noSpouses": "No spouses recorded.",
+    "confirmDelete": "Delete {{name}}?",
+    "removeRelation": "Remove this relation?",
+    "personalInfo": "Personal Info"
+  },
+  "form": {
+    "givenName": "Given Name",
+    "middleName": "Middle Name",
+    "familyName": "Family Name",
+    "fullName": "Full Name",
+    "nameType": "Name Type",
+    "nameOrder": "Name Order",
+    "bioGender": "Biological Gender",
+    "socialGender": "Social Gender",
+    "birthDate": "Birth Date",
+    "deathDate": "Death Date",
+    "birthPlace": "Birth Place",
+    "deathPlace": "Death Place",
+    "details": "Details",
+    "photoUrl": "Photo URL",
+    "addName": "+ Add Name",
+    "addPhoto": "+ Add Photo URL",
+    "remove": "Remove",
+    "addRelation": "+ Add Relation",
+    "optionalOverride": "Optional override (disables locale formatting)",
+    "nameTypePlaceholder": "e.g. birth, married",
+    "datePlaceholder": "YYYY-MM-DD",
+    "select": "-- Select --",
+    "selectPerson": "-- Select a person --"
+  },
+  "relation": {
+    "type": "Relation Type",
+    "subType": "Sub Type",
+    "parent": "Parent",
+    "child": "Child",
+    "spouse": "Spouse",
+    "marriageDate": "Marriage Date",
+    "endDate": "End Date",
+    "createNew": "Create new person",
+    "selectPerson": "Select Person",
+    "addRelation": "Add Relation",
+    "optional": "Optional",
+    "pleaseSelect": "Please select a person",
+    "from": "from",
+    "to": "to"
+  },
+  "gender": {
+    "male": "Male",
+    "female": "Female",
+    "other": "Other",
+    "unknown": "Unknown"
+  },
+  "parentSubType": {
+    "BioFather": "BioFather",
+    "BioMother": "BioMother",
+    "FosterFather": "FosterFather",
+    "FosterMother": "FosterMother",
+    "Unknown": "Unknown"
+  },
+  "childSubType": {
+    "Bio": "Bio",
+    "Adopted": "Adopted"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error: {{message}}",
+    "removeRelation": "Remove relation"
+  },
+  "language": {
+    "en": "English",
+    "zh": "Chinese"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register",
+    "username": "Username",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "passwordMismatch": "Passwords do not match",
+    "userManagement": "User Management",
+    "role": "Role",
+    "roleUser": "User",
+    "roleAdmin": "Admin",
+    "actions": "Actions",
+    "confirmDeleteUser": "Delete user {{username}}?",
+    "changePassword": "Change Password",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmNewPassword": "Confirm New Password",
+    "passwordChanged": "Password changed successfully",
+    "passwordTooShort": "Password must be at least 6 characters"
+  }
+}

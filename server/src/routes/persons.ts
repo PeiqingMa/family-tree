@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb } from '../database';
 import { Person, PersonCreate, PersonName, PersonSummary, PersonUpdate, RelationView } from '../models/person';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
 
@@ -124,7 +125,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 // POST /api/persons - create a new person
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', requireAuth, async (req: Request, res: Response) => {
   try {
     const db = getDb();
     const body: PersonCreate = req.body;
@@ -195,7 +196,7 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // PUT /api/persons/:id - update person properties
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const db = getDb();
     const body: PersonUpdate = req.body;
@@ -260,7 +261,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/persons/:id - delete person and associated relations
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const db = getDb();
     const person = await db('persons').where('id', req.params.id).first();
