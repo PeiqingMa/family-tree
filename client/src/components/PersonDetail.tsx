@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { getPerson, deletePerson, deleteRelation } from '../api';
 import type { PersonDetail as PersonDetailType } from '../types';
 import { getDisplayName, getNameDisplay } from '../utils';
+import { useAuth } from '../contexts/AuthContext';
 import RelationForm from './RelationForm';
 
 function PersonDetail() {
@@ -11,6 +12,7 @@ function PersonDetail() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
+  const { isAuthenticated } = useAuth();
   const [person, setPerson] = useState<PersonDetailType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,10 +60,12 @@ function PersonDetail() {
     <div className="page">
       <div className="page-header">
         <h2>{getDisplayName(person, locale)}</h2>
-        <div className="actions">
-          <Link to={`/persons/${person.id}/edit`} className="btn btn-secondary">{t('person.edit')}</Link>
-          <button onClick={handleDelete} className="btn btn-danger">{t('person.delete')}</button>
-        </div>
+        {isAuthenticated && (
+          <div className="actions">
+            <Link to={`/persons/${person.id}/edit`} className="btn btn-secondary">{t('person.edit')}</Link>
+            <button onClick={handleDelete} className="btn btn-danger">{t('person.delete')}</button>
+          </div>
+        )}
       </div>
 
       <div className="detail-grid">
@@ -129,7 +133,7 @@ function PersonDetail() {
                 <li key={rel.relationId}>
                   <Link to={`/persons/${rel.person.id}`}>{getDisplayName(rel.person, locale)}</Link>
                   {rel.subType && <span className="tag">{rel.subType}</span>}
-                  <button className="btn-icon" onClick={() => handleDeleteRelation(rel.relationId)} title={t('common.removeRelation')}>&times;</button>
+                  {isAuthenticated && <button className="btn-icon" onClick={() => handleDeleteRelation(rel.relationId)} title={t('common.removeRelation')}>&times;</button>}
                 </li>
               ))}
             </ul>
@@ -146,7 +150,7 @@ function PersonDetail() {
                 <li key={rel.relationId}>
                   <Link to={`/persons/${rel.person.id}`}>{getDisplayName(rel.person, locale)}</Link>
                   {rel.subType && <span className="tag">{rel.subType}</span>}
-                  <button className="btn-icon" onClick={() => handleDeleteRelation(rel.relationId)} title={t('common.removeRelation')}>&times;</button>
+                  {isAuthenticated && <button className="btn-icon" onClick={() => handleDeleteRelation(rel.relationId)} title={t('common.removeRelation')}>&times;</button>}
                 </li>
               ))}
             </ul>
@@ -164,7 +168,7 @@ function PersonDetail() {
                   <Link to={`/persons/${rel.person.id}`}>{getDisplayName(rel.person, locale)}</Link>
                   {rel.spouseFrom && <span className="tag">{t('relation.from')} {rel.spouseFrom}</span>}
                   {rel.spouseEnd && <span className="tag">{t('relation.to')} {rel.spouseEnd}</span>}
-                  <button className="btn-icon" onClick={() => handleDeleteRelation(rel.relationId)} title={t('common.removeRelation')}>&times;</button>
+                  {isAuthenticated && <button className="btn-icon" onClick={() => handleDeleteRelation(rel.relationId)} title={t('common.removeRelation')}>&times;</button>}
                 </li>
               ))}
             </ul>
@@ -172,20 +176,22 @@ function PersonDetail() {
         </div>
       </div>
 
-      <div className="add-relation-section">
-        <button className="btn btn-secondary" onClick={() => setShowRelationForm(!showRelationForm)}>
-          {showRelationForm ? t('person.cancel') : t('form.addRelation')}
-        </button>
-        {showRelationForm && (
-          <RelationForm
-            personId={person.id}
-            onSuccess={() => {
-              setShowRelationForm(false);
-              loadPerson();
-            }}
-          />
-        )}
-      </div>
+      {isAuthenticated && (
+        <div className="add-relation-section">
+          <button className="btn btn-secondary" onClick={() => setShowRelationForm(!showRelationForm)}>
+            {showRelationForm ? t('person.cancel') : t('form.addRelation')}
+          </button>
+          {showRelationForm && (
+            <RelationForm
+              personId={person.id}
+              onSuccess={() => {
+                setShowRelationForm(false);
+                loadPerson();
+              }}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import LanguageSwitcher from './LanguageSwitcher';
 
 interface LayoutProps {
@@ -10,6 +11,7 @@ interface LayoutProps {
 function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const { t } = useTranslation();
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
 
   return (
     <div className="app-layout">
@@ -28,11 +30,34 @@ function Layout({ children }: LayoutProps) {
               {t('nav.graphView')}
             </Link>
           </li>
+          {isAdmin && (
+            <li>
+              <Link to="/admin/users" className={location.pathname === '/admin/users' ? 'active' : ''}>
+                {t('auth.userManagement')}
+              </Link>
+            </li>
+          )}
         </ul>
-        <div className="sidebar-actions">
-          <Link to="/persons/new" className="btn btn-primary">
-            {t('nav.addPerson')}
-          </Link>
+        {isAuthenticated && (
+          <div className="sidebar-actions">
+            <Link to="/persons/new" className="btn btn-primary">
+              {t('nav.addPerson')}
+            </Link>
+          </div>
+        )}
+        <div className="sidebar-auth">
+          {isAuthenticated ? (
+            <div className="auth-info">
+              <span className="username">{user?.username}</span>
+              <button className="btn btn-secondary btn-sm" onClick={logout}>
+                {t('auth.logout')}
+              </button>
+            </div>
+          ) : (
+            <Link to="/login" className="btn btn-secondary">
+              {t('auth.login')}
+            </Link>
+          )}
         </div>
         <LanguageSwitcher />
       </nav>

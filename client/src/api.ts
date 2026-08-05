@@ -13,6 +13,63 @@ const api = axios.create({
   baseURL: '/api',
 });
 
+// Add request interceptor to attach Bearer token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Auth API functions
+export interface AuthResponse {
+  token: string;
+  user: {
+    id: string;
+    username: string;
+    role: 'user' | 'admin';
+    createdAt: string;
+  };
+}
+
+export interface UserInfo {
+  id: string;
+  username: string;
+  role: 'user' | 'admin';
+  createdAt: string;
+}
+
+export async function loginUser(username: string, password: string): Promise<AuthResponse> {
+  const res = await api.post('/auth/login', { username, password });
+  return res.data;
+}
+
+export async function registerUser(username: string, password: string): Promise<AuthResponse> {
+  const res = await api.post('/auth/register', { username, password });
+  return res.data;
+}
+
+export async function getCurrentUser(): Promise<UserInfo> {
+  const res = await api.get('/auth/me');
+  return res.data;
+}
+
+export async function getUsers(): Promise<UserInfo[]> {
+  const res = await api.get('/users');
+  return res.data;
+}
+
+export async function updateUserRole(id: string, role: string): Promise<UserInfo> {
+  const res = await api.put(`/users/${id}/role`, { role });
+  return res.data;
+}
+
+export async function deleteUser(id: string): Promise<void> {
+  await api.delete(`/users/${id}`);
+}
+
+// Person API functions
 export async function getPersons(): Promise<Person[]> {
   const res = await api.get('/persons');
   return res.data;

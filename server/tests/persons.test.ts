@@ -1,6 +1,14 @@
 import request from 'supertest';
+import jwt from 'jsonwebtoken';
 import app from '../src/app';
 import { initializeDatabase, closeDatabase } from '../src/database';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'family-tree-secret-key';
+const authToken = jwt.sign(
+  { userId: 'test-user-id', username: 'testuser', role: 'admin' },
+  JWT_SECRET,
+  { expiresIn: '1h' }
+);
 
 describe('Persons API', () => {
   beforeAll(async () => {
@@ -16,6 +24,7 @@ describe('Persons API', () => {
   it('POST /api/persons - should create a person', async () => {
     const response = await request(app)
       .post('/api/persons')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         names: [
           {
@@ -78,6 +87,7 @@ describe('Persons API', () => {
   it('PUT /api/persons/:id - should update person properties', async () => {
     const response = await request(app)
       .put(`/api/persons/${createdPersonId}`)
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         lifeEnd: '2050-12-31',
         deathPlace: 'Los Angeles',
@@ -100,6 +110,7 @@ describe('Persons API', () => {
   it('PUT /api/persons/:id - should return 404 for non-existent person', async () => {
     const response = await request(app)
       .put('/api/persons/non-existent-id')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({ bioGender: 'Female' });
 
     expect(response.status).toBe(404);
@@ -108,6 +119,7 @@ describe('Persons API', () => {
   it('POST /api/persons - should create a person with minimal data', async () => {
     const response = await request(app)
       .post('/api/persons')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         names: [{ familyName: 'Doe', givenName: 'Jane', fullName: 'Jane Doe' }],
       });
@@ -119,6 +131,7 @@ describe('Persons API', () => {
   it('POST /api/persons - should return 400 when no names provided', async () => {
     const response = await request(app)
       .post('/api/persons')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({});
 
     expect(response.status).toBe(400);
@@ -128,6 +141,7 @@ describe('Persons API', () => {
   it('POST /api/persons - should return 400 when names array is empty', async () => {
     const response = await request(app)
       .post('/api/persons')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({ names: [] });
 
     expect(response.status).toBe(400);
@@ -137,6 +151,7 @@ describe('Persons API', () => {
   it('POST /api/persons - should return 400 when names have no givenName or familyName', async () => {
     const response = await request(app)
       .post('/api/persons')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({ names: [{ middleName: 'Only' }] });
 
     expect(response.status).toBe(400);
@@ -147,13 +162,16 @@ describe('Persons API', () => {
     // Create a person to delete
     const createRes = await request(app)
       .post('/api/persons')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         names: [{ familyName: 'ToDelete', givenName: 'Person', fullName: 'Person ToDelete' }],
       });
 
     const personId = createRes.body.id;
 
-    const deleteRes = await request(app).delete(`/api/persons/${personId}`);
+    const deleteRes = await request(app)
+      .delete(`/api/persons/${personId}`)
+      .set('Authorization', `Bearer ${authToken}`);
     expect(deleteRes.status).toBe(204);
 
     // Verify person is gone
@@ -162,7 +180,19 @@ describe('Persons API', () => {
   });
 
   it('DELETE /api/persons/:id - should return 404 for non-existent person', async () => {
-    const response = await request(app).delete('/api/persons/non-existent-id');
+    const response = await request(app)
+      .delete('/api/persons/non-existent-id')
+      .set('Authorization', `Bearer ${authToken}`);
     expect(response.status).toBe(404);
+  });
+
+  it('POST /api/persons - should return 401 without auth token', async () => {
+    const response = await request(app)
+      .post('/api/persons')
+      .send({
+        names: [{ familyName: 'NoAuth', givenName: 'Test', fullName: 'Test NoAuth' }],
+      });
+
+    expect(response.status).toBe(401);
   });
 });

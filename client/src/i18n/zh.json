@@ -111,5 +111,22 @@
   "language": {
     "en": "English",
     "zh": "中文"
+  },
+  "auth": {
+    "login": "登录",
+    "logout": "退出",
+    "register": "注册",
+    "username": "用户名",
+    "password": "密码",
+    "confirmPassword": "确认密码",
+    "noAccount": "没有账号？",
+    "hasAccount": "已有账号？",
+    "passwordMismatch": "两次密码输入不一致",
+    "userManagement": "用户管理",
+    "role": "角色",
+    "roleUser": "用户",
+    "roleAdmin": "管理员",
+    "actions": "操作",
+    "confirmDeleteUser": "确定删除用户 {{username}} 吗？"
   }
 }

@@ -1,6 +1,14 @@
 import request from 'supertest';
+import jwt from 'jsonwebtoken';
 import app from '../src/app';
 import { initializeDatabase, closeDatabase } from '../src/database';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'family-tree-secret-key';
+const authToken = jwt.sign(
+  { userId: 'test-user-id', username: 'testuser', role: 'admin' },
+  JWT_SECRET,
+  { expiresIn: '1h' }
+);
 
 describe('Relations API', () => {
   beforeAll(async () => {
@@ -20,6 +28,7 @@ describe('Relations API', () => {
     // Create test persons
     const resA = await request(app)
       .post('/api/persons')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         names: [{ familyName: 'Wang', givenName: 'Wei', fullName: 'Wang Wei' }],
         bioGender: 'Male',
@@ -29,6 +38,7 @@ describe('Relations API', () => {
 
     const resB = await request(app)
       .post('/api/persons')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         names: [{ familyName: 'Li', givenName: 'Mei', fullName: 'Li Mei' }],
         bioGender: 'Female',
@@ -38,6 +48,7 @@ describe('Relations API', () => {
 
     const resC = await request(app)
       .post('/api/persons')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         names: [{ familyName: 'Wang', givenName: 'Jun', fullName: 'Wang Jun' }],
         bioGender: 'Male',
@@ -50,6 +61,7 @@ describe('Relations API', () => {
     // C's parent is A (Wang Jun's parent is Wang Wei)
     const response = await request(app)
       .post('/api/relations')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         fromPersonId: personCId,
         toPersonId: personAId,
@@ -71,6 +83,7 @@ describe('Relations API', () => {
     // A's child is C (Wang Wei's child is Wang Jun)
     const response = await request(app)
       .post('/api/relations')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         fromPersonId: personAId,
         toPersonId: personCId,
@@ -86,6 +99,7 @@ describe('Relations API', () => {
   it('POST /api/relations - should create a spouse relation', async () => {
     const response = await request(app)
       .post('/api/relations')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         fromPersonId: personAId,
         toPersonId: personBId,
@@ -101,6 +115,7 @@ describe('Relations API', () => {
   it('POST /api/relations - should return 404 for non-existent person', async () => {
     const response = await request(app)
       .post('/api/relations')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         fromPersonId: 'non-existent',
         toPersonId: personAId,
@@ -113,6 +128,7 @@ describe('Relations API', () => {
   it('POST /api/relations - should return 400 for invalid relation type', async () => {
     const response = await request(app)
       .post('/api/relations')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         fromPersonId: personAId,
         toPersonId: personBId,
@@ -126,6 +142,7 @@ describe('Relations API', () => {
     // Create a relation
     const first = await request(app)
       .post('/api/relations')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         fromPersonId: personBId,
         toPersonId: personAId,
@@ -136,6 +153,7 @@ describe('Relations API', () => {
     // Try to create the same relation again
     const duplicate = await request(app)
       .post('/api/relations')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         fromPersonId: personBId,
         toPersonId: personAId,
@@ -161,6 +179,7 @@ describe('Relations API', () => {
   it('POST /api/relations/with-person - should create a new person with relation', async () => {
     const response = await request(app)
       .post('/api/relations/with-person')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         existingPersonId: personCId,
         relationType: 'parent',
@@ -180,12 +199,16 @@ describe('Relations API', () => {
   });
 
   it('DELETE /api/relations/:id - should delete a relation', async () => {
-    const response = await request(app).delete(`/api/relations/${relationId}`);
+    const response = await request(app)
+      .delete(`/api/relations/${relationId}`)
+      .set('Authorization', `Bearer ${authToken}`);
     expect(response.status).toBe(204);
   });
 
   it('DELETE /api/relations/:id - should return 404 for non-existent relation', async () => {
-    const response = await request(app).delete('/api/relations/non-existent-id');
+    const response = await request(app)
+      .delete('/api/relations/non-existent-id')
+      .set('Authorization', `Bearer ${authToken}`);
     expect(response.status).toBe(404);
   });
 
@@ -193,6 +216,7 @@ describe('Relations API', () => {
     // Create a person and relation
     const personRes = await request(app)
       .post('/api/persons')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         names: [{ familyName: 'Test', givenName: 'Delete', fullName: 'Test Delete' }],
       });
@@ -200,6 +224,7 @@ describe('Relations API', () => {
 
     await request(app)
       .post('/api/relations')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         fromPersonId: testPersonId,
         toPersonId: personAId,
@@ -208,7 +233,9 @@ describe('Relations API', () => {
       });
 
     // Delete the person
-    await request(app).delete(`/api/persons/${testPersonId}`);
+    await request(app)
+      .delete(`/api/persons/${testPersonId}`)
+      .set('Authorization', `Bearer ${authToken}`);
 
     // Verify relations are gone - person A should not have relation to deleted person
     const personARes = await request(app).get(`/api/persons/${personAId}`);
@@ -219,6 +246,18 @@ describe('Relations API', () => {
     ].some((r: any) => r.person.id === testPersonId);
 
     expect(hasDeletedRelation).toBe(false);
+  });
+
+  it('POST /api/relations - should return 401 without auth token', async () => {
+    const response = await request(app)
+      .post('/api/relations')
+      .send({
+        fromPersonId: personAId,
+        toPersonId: personBId,
+        relationType: 'spouse',
+      });
+
+    expect(response.status).toBe(401);
   });
 });
 
@@ -240,6 +279,7 @@ describe('Tree API', () => {
     // Create a family: grandparent -> parent -> child -> grandchild
     const gp = await request(app)
       .post('/api/persons')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         names: [{ familyName: 'Zhang', givenName: 'Yi', fullName: 'Zhang Yi' }],
         bioGender: 'Male',
@@ -248,6 +288,7 @@ describe('Tree API', () => {
 
     const p = await request(app)
       .post('/api/persons')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         names: [{ familyName: 'Zhang', givenName: 'Er', fullName: 'Zhang Er' }],
         bioGender: 'Male',
@@ -256,6 +297,7 @@ describe('Tree API', () => {
 
     const c = await request(app)
       .post('/api/persons')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         names: [{ familyName: 'Zhang', givenName: 'San', fullName: 'Zhang San' }],
         bioGender: 'Male',
@@ -264,6 +306,7 @@ describe('Tree API', () => {
 
     const gc = await request(app)
       .post('/api/persons')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         names: [{ familyName: 'Zhang', givenName: 'Si', fullName: 'Zhang Si' }],
         bioGender: 'Male',
@@ -273,6 +316,7 @@ describe('Tree API', () => {
     // parent's parent is grandparent
     await request(app)
       .post('/api/relations')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         fromPersonId: parentId,
         toPersonId: grandparentId,
@@ -283,6 +327,7 @@ describe('Tree API', () => {
     // child's parent is parent
     await request(app)
       .post('/api/relations')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         fromPersonId: childId,
         toPersonId: parentId,
@@ -293,6 +338,7 @@ describe('Tree API', () => {
     // grandchild's parent is child
     await request(app)
       .post('/api/relations')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         fromPersonId: grandchildId,
         toPersonId: childId,
@@ -303,6 +349,7 @@ describe('Tree API', () => {
     // grandparent's child is parent
     await request(app)
       .post('/api/relations')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         fromPersonId: grandparentId,
         toPersonId: parentId,
@@ -313,6 +360,7 @@ describe('Tree API', () => {
     // parent's child is child
     await request(app)
       .post('/api/relations')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         fromPersonId: parentId,
         toPersonId: childId,
@@ -323,6 +371,7 @@ describe('Tree API', () => {
     // child's child is grandchild
     await request(app)
       .post('/api/relations')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({
         fromPersonId: childId,
         toPersonId: grandchildId,

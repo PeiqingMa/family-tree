@@ -1,5 +1,7 @@
 import knex, { Knex } from 'knex';
 import path from 'path';
+import bcrypt from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid';
 
 let db: Knex;
 
@@ -68,6 +70,28 @@ async function createTables(db: Knex): Promise<void> {
       table.text('spouse_from');
       table.text('spouse_end');
       table.text('created_at');
+    });
+  }
+
+  const hasUsers = await db.schema.hasTable('users');
+  if (!hasUsers) {
+    await db.schema.createTable('users', (table) => {
+      table.text('id').primary();
+      table.text('username').notNullable().unique();
+      table.text('password_hash').notNullable();
+      table.text('role').defaultTo('user');
+      table.text('created_at');
+    });
+
+    // Seed default admin user
+    const adminId = uuidv4();
+    const passwordHash = bcrypt.hashSync('admin123', 10);
+    await db('users').insert({
+      id: adminId,
+      username: 'admin',
+      password_hash: passwordHash,
+      role: 'admin',
+      created_at: new Date().toISOString(),
     });
   }
 }

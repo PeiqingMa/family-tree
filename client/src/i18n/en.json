@@ -111,5 +111,22 @@
   "language": {
     "en": "English",
     "zh": "Chinese"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register",
+    "username": "Username",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "passwordMismatch": "Passwords do not match",
+    "userManagement": "User Management",
+    "role": "Role",
+    "roleUser": "User",
+    "roleAdmin": "Admin",
+    "actions": "Actions",
+    "confirmDeleteUser": "Delete user {{username}}?"
   }
 }
