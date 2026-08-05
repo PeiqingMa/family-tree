@@ -306,6 +306,8 @@ function familyTreeLayout(
 
   // Fourth pass: bottom-up adjustment to re-center parents above their children
   // Process generations from deepest to shallowest
+  // Track parents already re-centered to avoid double-shifting in multi-unit cases (remarriage)
+  const recenteredParents: Set<string> = new Set();
   const reversedGens = [...sortedGens].reverse();
   for (const gen of reversedGens) {
     // Find family units whose children are at a deeper generation
@@ -328,9 +330,14 @@ function familyTreeLayout(
       const childrenMaxX = Math.max(...childPositions.map(p => p.x + NODE_WIDTH));
       const childrenCenterX = (childrenMinX + childrenMaxX) / 2;
 
-      // Calculate desired center of parents
+      // Calculate desired center of parents, skipping any already re-centered
       const parentsInGen = unit.parents.filter(p => generations.get(p) === gen);
       if (parentsInGen.length === 0) continue;
+
+      // Skip this unit if any parent has already been re-centered
+      // (prevents double-shifting for multi-unit parents like remarriages)
+      const hasRecenteredParent = parentsInGen.some(p => recenteredParents.has(p));
+      if (hasRecenteredParent) continue;
 
       const parentPositions = parentsInGen
         .map(p => positions.get(p))
@@ -349,10 +356,16 @@ function familyTreeLayout(
           if (pos) pos.x += parentShift;
         }
       }
+
+      // Mark these parents as re-centered
+      for (const pId of parentsInGen) {
+        recenteredParents.add(pId);
+      }
     }
   }
 
   // Fifth pass: final overlap resolution after parent re-centering
+  // Propagate shifts rightward (same as pass 3) to prevent chain overlaps
   for (const gen of sortedGens) {
     const nodesInGen = genGroups.get(gen)!;
     const sortedNodes = nodesInGen
@@ -364,7 +377,14 @@ function familyTreeLayout(
       const curr = positions.get(sortedNodes[i])!;
       const minX = prev.x + NODE_WIDTH + SPOUSE_GAP;
       if (curr.x < minX) {
+        const shift = minX - curr.x;
         curr.x = minX;
+
+        // Propagate the shift to all nodes to the right in this generation
+        for (let j = i + 1; j < sortedNodes.length; j++) {
+          const node = positions.get(sortedNodes[j])!;
+          node.x += shift;
+        }
       }
     }
   }

@@ -50,7 +50,7 @@ function Layout({ children }: LayoutProps) {
             {isAuthenticated ? (
               <div className="auth-info">
                 <div className="auth-user">
-                  <div className="user-avatar">
+                  <div className="user-avatar" aria-hidden="true">
                     {user?.username?.charAt(0).toUpperCase()}
                   </div>
                   <span className="username">{user?.username}</span>
