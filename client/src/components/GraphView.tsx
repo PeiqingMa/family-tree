@@ -17,7 +17,7 @@ import { getGraph } from '../api';
 import type { GraphData, GraphEdge } from '../types';
 import { getDisplayName, getBirthYear } from '../utils';
 
-const NODE_WIDTH = 172;
+const NODE_WIDTH = 140;
 const NODE_HEIGHT = 50;
 const SPOUSE_GAP = 50;
 const FAMILY_UNIT_GAP = 100;
@@ -66,6 +66,17 @@ function buildFamilyStructure(edges: GraphEdge[]) {
       parentChildMap.get(parentId)!.add(childId);
       if (!childParentMap.has(childId)) childParentMap.set(childId, new Set());
       childParentMap.get(childId)!.add(parentId);
+    }
+  }
+
+  // Detect implicit spouse pairs (co-parents of same child)
+  for (const [childId, parents] of childParentMap) {
+    const parentList = [...parents];
+    for (let i = 0; i < parentList.length; i++) {
+      for (let j = i + 1; j < parentList.length; j++) {
+        const key = [parentList[i], parentList[j]].sort().join(':::');
+        spousePairs.add(key);
+      }
     }
   }
 
@@ -630,7 +641,6 @@ function GraphView() {
             padding: '10px',
             fontSize: '12px',
             position: 'relative' as const,
-            minWidth: `${NODE_WIDTH}px`,
           },
         }));
 
