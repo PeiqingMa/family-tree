@@ -5,6 +5,7 @@ import {
   ReactFlow,
   Background,
   Controls,
+  Handle,
   Position,
   MarkerType,
   type Node,
@@ -111,7 +112,8 @@ function assignGenerations(
 }
 
 /**
- * Build family units: groups of (couple or single parent) + their shared children
+ * Build family units: groups of (couple or single parent) + their shared children.
+ * Ensures every child is assigned to exactly one family unit.
  */
 function buildFamilyUnits(
   spousePairs: Set<string>,
@@ -119,9 +121,10 @@ function buildFamilyUnits(
   nodeIds: string[]
 ): FamilyUnit[] {
   const units: FamilyUnit[] = [];
-  const processedAsParent: Set<string> = new Set();
+  // Track all children that have been assigned to a family unit
+  const assignedChildren: Set<string> = new Set();
 
-  // First, process spouse pairs to find couple-based family units
+  // First, process spouse pairs to find couple-based family units with shared children
   for (const pairKey of spousePairs) {
     const [p1, p2] = pairKey.split('-');
     const children1 = parentChildMap.get(p1) || new Set<string>();
@@ -140,48 +143,23 @@ function buildFamilyUnits(
       children: sharedChildren,
     });
 
-    processedAsParent.add(p1);
-    processedAsParent.add(p2);
-
-    // Handle children that belong to only one parent in this couple
-    for (const child of children1) {
-      if (!children2.has(child)) {
-        // Check if this child is shared with another spouse of p1
-        // Will be handled by other spouse pair iterations
-      }
-    }
-    for (const child of children2) {
-      if (!children1.has(child)) {
-        // Same as above
-      }
+    for (const child of sharedChildren) {
+      assignedChildren.add(child);
     }
   }
 
-  // Then, process single parents (people with children but no spouse pair covering them)
+  // Second pass: for each parent, find children not yet assigned to any unit.
+  // These are children from previous relationships or single-parent situations.
   for (const [parentId, children] of parentChildMap) {
-    if (processedAsParent.has(parentId)) {
-      // Check for children not covered by any couple unit
-      const coveredChildren = new Set<string>();
-      for (const unit of units) {
-        if (unit.parents.includes(parentId)) {
-          for (const child of unit.children) {
-            coveredChildren.add(child);
-          }
-        }
-      }
-      const uncoveredChildren = [...children].filter(c => !coveredChildren.has(c));
-      if (uncoveredChildren.length > 0) {
-        units.push({
-          parents: [parentId],
-          children: uncoveredChildren,
-        });
-      }
-    } else {
+    const uncoveredChildren = [...children].filter(c => !assignedChildren.has(c));
+    if (uncoveredChildren.length > 0) {
       units.push({
         parents: [parentId],
-        children: [...children],
+        children: uncoveredChildren,
       });
-      processedAsParent.add(parentId);
+      for (const child of uncoveredChildren) {
+        assignedChildren.add(child);
+      }
     }
   }
 
@@ -300,10 +278,83 @@ function familyTreeLayout(
     }
   }
 
-  // Resolve overlaps within each generation
+  // Third pass: resolve overlaps within each generation (runs AFTER centering)
+  // When resolving overlaps, propagate shifts to children of affected nodes
   for (const gen of sortedGens) {
     const nodesInGen = genGroups.get(gen)!;
     // Sort by X position
+    const sortedNodes = nodesInGen
+      .filter(id => positions.has(id))
+      .sort((a, b) => (positions.get(a)!.x) - (positions.get(b)!.x));
+
+    for (let i = 1; i < sortedNodes.length; i++) {
+      const prev = positions.get(sortedNodes[i - 1])!;
+      const curr = positions.get(sortedNodes[i])!;
+      const minX = prev.x + NODE_WIDTH + SPOUSE_GAP;
+      if (curr.x < minX) {
+        const shift = minX - curr.x;
+        curr.x = minX;
+
+        // Propagate the shift to all nodes to the right in this generation
+        for (let j = i + 1; j < sortedNodes.length; j++) {
+          const node = positions.get(sortedNodes[j])!;
+          node.x += shift;
+        }
+      }
+    }
+  }
+
+  // Fourth pass: bottom-up adjustment to re-center parents above their children
+  // Process generations from deepest to shallowest
+  const reversedGens = [...sortedGens].reverse();
+  for (const gen of reversedGens) {
+    // Find family units whose children are at a deeper generation
+    const unitsWithChildrenBelow = familyUnits.filter(unit => {
+      if (unit.children.length === 0) return false;
+      return unit.parents.some(p => generations.get(p) === gen);
+    });
+
+    for (const unit of unitsWithChildrenBelow) {
+      if (unit.children.length === 0) continue;
+
+      // Get current child positions
+      const childPositions = unit.children
+        .map(c => positions.get(c))
+        .filter(Boolean) as LayoutPosition[];
+      if (childPositions.length === 0) continue;
+
+      // Calculate the center of children
+      const childrenMinX = Math.min(...childPositions.map(p => p.x));
+      const childrenMaxX = Math.max(...childPositions.map(p => p.x + NODE_WIDTH));
+      const childrenCenterX = (childrenMinX + childrenMaxX) / 2;
+
+      // Calculate desired center of parents
+      const parentsInGen = unit.parents.filter(p => generations.get(p) === gen);
+      if (parentsInGen.length === 0) continue;
+
+      const parentPositions = parentsInGen
+        .map(p => positions.get(p))
+        .filter(Boolean) as LayoutPosition[];
+      if (parentPositions.length === 0) continue;
+
+      const parentsMinX = Math.min(...parentPositions.map(p => p.x));
+      const parentsMaxX = Math.max(...parentPositions.map(p => p.x + NODE_WIDTH));
+      const parentsCenterX = (parentsMinX + parentsMaxX) / 2;
+
+      // Shift parents to align their center above children center
+      const parentShift = childrenCenterX - parentsCenterX;
+      if (Math.abs(parentShift) > 1) {
+        for (const pId of parentsInGen) {
+          const pos = positions.get(pId);
+          if (pos) pos.x += parentShift;
+        }
+      }
+    }
+  }
+
+  // Fifth pass: final overlap resolution after parent re-centering
+  for (const gen of sortedGens) {
+    const nodesInGen = genGroups.get(gen)!;
     const sortedNodes = nodesInGen
       .filter(id => positions.has(id))
       .sort((a, b) => (positions.get(a)!.x) - (positions.get(b)!.x));
@@ -422,72 +473,60 @@ function familyTreeLayout(
   return { nodes: layoutedNodes, edges: flowEdges };
 }
 
-// --- Custom Node with explicit handles ---
+// --- Custom Node with proper Handle components ---
 
 function PersonNode({ data, style }: { data: Record<string, unknown>; style?: React.CSSProperties }) {
   return (
     <div style={style}>
       {/* Left handle for spouse connections */}
-      <div
-        className="react-flow__handle react-flow__handle-left"
-        data-handleid="left"
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="left"
+        isConnectable={false}
         style={{
-          position: 'absolute',
-          left: -4,
-          top: '50%',
-          transform: 'translateY(-50%)',
           width: 8,
           height: 8,
           background: '#e91e63',
-          borderRadius: '50%',
           border: 'none',
         }}
       />
       {/* Right handle for spouse connections */}
-      <div
-        className="react-flow__handle react-flow__handle-right"
-        data-handleid="right"
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right"
+        isConnectable={false}
         style={{
-          position: 'absolute',
-          right: -4,
-          top: '50%',
-          transform: 'translateY(-50%)',
           width: 8,
           height: 8,
           background: '#e91e63',
-          borderRadius: '50%',
           border: 'none',
         }}
       />
-      {/* Top handle for parent connections */}
-      <div
-        className="react-flow__handle react-flow__handle-top"
-        data-handleid="top"
+      {/* Top handle for parent connections (target from parent above) */}
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="top"
+        isConnectable={false}
         style={{
-          position: 'absolute',
-          top: -4,
-          left: '50%',
-          transform: 'translateX(-50%)',
           width: 8,
           height: 8,
           background: '#1976d2',
-          borderRadius: '50%',
           border: 'none',
         }}
       />
-      {/* Bottom handle for child connections */}
-      <div
-        className="react-flow__handle react-flow__handle-bottom"
-        data-handleid="bottom"
+      {/* Bottom handle for child connections (source to child below) */}
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="bottom"
+        isConnectable={false}
         style={{
-          position: 'absolute',
-          bottom: -4,
-          left: '50%',
-          transform: 'translateX(-50%)',
           width: 8,
           height: 8,
           background: '#1976d2',
-          borderRadius: '50%',
           border: 'none',
         }}
       />
