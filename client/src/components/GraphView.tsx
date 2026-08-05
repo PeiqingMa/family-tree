@@ -75,13 +75,19 @@ function buildFamilyStructure(edges: GraphEdge[]) {
 /**
  * Determine generation (depth) for each person.
  * Root nodes (no parents) are generation 0.
+ * After initial assignment, spouses are unified to the same generation (the max
+ * of the pair), and descendants are propagated so children are always deeper
+ * than their parents.
  */
 function assignGenerations(
   nodeIds: string[],
-  childParentMap: Map<string, Set<string>>
+  childParentMap: Map<string, Set<string>>,
+  spousePairs: Set<string>,
+  parentChildMap: Map<string, Set<string>>
 ): Map<string, number> {
   const generations: Map<string, number> = new Map();
 
+  // Step 1: Initial assignment based purely on parent-child ancestry
   function getGeneration(id: string, visited: Set<string>): number {
     if (generations.has(id)) return generations.get(id)!;
     if (visited.has(id)) return 0; // cycle protection
@@ -106,6 +112,47 @@ function assignGenerations(
 
   for (const id of nodeIds) {
     getGeneration(id, new Set());
+  }
+
+  // Step 2: Unify spouse generations -- both spouses must be at the same level.
+  // We iterate until stable because unifying one pair may affect another pair
+  // through shared ancestry chains.
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const pairKey of spousePairs) {
+      const [p1, p2] = pairKey.split('-');
+      const gen1 = generations.get(p1) ?? 0;
+      const gen2 = generations.get(p2) ?? 0;
+      if (gen1 !== gen2) {
+        const maxGen = Math.max(gen1, gen2);
+        if (gen1 < maxGen) {
+          generations.set(p1, maxGen);
+          changed = true;
+        }
+        if (gen2 < maxGen) {
+          generations.set(p2, maxGen);
+          changed = true;
+        }
+      }
+    }
+
+    // Step 3: Propagate -- ensure every child's generation is strictly greater
+    // than all of its parents' generations. This handles cascading updates when
+    // a spouse was pulled down.
+    for (const id of nodeIds) {
+      const parents = childParentMap.get(id);
+      if (!parents || parents.size === 0) continue;
+      let maxParentGen = 0;
+      for (const parentId of parents) {
+        maxParentGen = Math.max(maxParentGen, generations.get(parentId) ?? 0);
+      }
+      const requiredGen = maxParentGen + 1;
+      if ((generations.get(id) ?? 0) < requiredGen) {
+        generations.set(id, requiredGen);
+        changed = true;
+      }
+    }
   }
 
   return generations;
@@ -177,7 +224,7 @@ function familyTreeLayout(
 
   const nodeIds = flowNodes.map(n => n.id);
   const { spousePairs, parentChildMap, childParentMap } = buildFamilyStructure(edges);
-  const generations = assignGenerations(nodeIds, childParentMap);
+  const generations = assignGenerations(nodeIds, childParentMap, spousePairs, parentChildMap);
 
   // Group nodes by generation
   const genGroups: Map<number, string[]> = new Map();
