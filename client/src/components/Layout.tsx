@@ -38,31 +38,42 @@ function Layout({ children }: LayoutProps) {
             </li>
           )}
         </ul>
-        {isAuthenticated && (
-          <div className="sidebar-actions">
-            <Link to="/persons/new" className="btn btn-primary">
-              {t('nav.addPerson')}
-            </Link>
-          </div>
-        )}
-        <div className="sidebar-auth">
-          {isAuthenticated ? (
-            <div className="auth-info">
-              <span className="username">{user?.username}</span>
-              <Link to="/change-password" className="btn btn-secondary btn-sm">
-                {t('auth.changePassword')}
+        <div className="sidebar-bottom">
+          {isAuthenticated && (
+            <div className="sidebar-actions">
+              <Link to="/persons/new" className="btn btn-primary">
+                {t('nav.addPerson')}
               </Link>
-              <button className="btn btn-secondary btn-sm" onClick={logout}>
-                {t('auth.logout')}
-              </button>
             </div>
-          ) : (
-            <Link to="/login" className="btn btn-secondary">
-              {t('auth.login')}
-            </Link>
           )}
+          <div className="sidebar-auth">
+            {isAuthenticated ? (
+              <div className="auth-info">
+                <div className="auth-user">
+                  <div className="user-avatar">
+                    {user?.username?.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="username">{user?.username}</span>
+                </div>
+                <div className="auth-buttons">
+                  <Link to="/change-password" className="btn btn-sidebar btn-sm">
+                    {t('auth.changePassword')}
+                  </Link>
+                  <button className="btn btn-sidebar btn-sm" onClick={logout}>
+                    {t('auth.logout')}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <Link to="/login" className="btn btn-sidebar-login">
+                {t('auth.login')}
+              </Link>
+            )}
+          </div>
+          <div className="sidebar-language">
+            <LanguageSwitcher />
+          </div>
         </div>
-        <LanguageSwitcher />
       </nav>
       <main className="main-content">
         {children}
