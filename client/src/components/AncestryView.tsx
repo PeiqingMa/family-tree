@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   ReactFlow,
   Background,
@@ -16,6 +17,8 @@ import { getDisplayName } from '../utils';
 function AncestryView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language;
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +35,7 @@ function AncestryView() {
         const flowEdges: Edge[] = [];
         const addedNodes = new Set<string>();
 
-        setPersonName(getDisplayName(ancestorTree));
+        setPersonName(getDisplayName(ancestorTree, locale));
 
         // Process ancestors (going up)
         function processAncestors(node: TreeNode, x: number, y: number, level: number) {
@@ -43,7 +46,7 @@ function AncestryView() {
           flowNodes.push({
             id: String(node.id),
             position: { x, y },
-            data: { label: getDisplayName(node) },
+            data: { label: getDisplayName(node, locale) },
             style: {
               background: isRoot ? '#fff3e0' : node.bioGender === 'Male' ? '#e3f2fd' : node.bioGender === 'Female' ? '#fce4ec' : '#f5f5f5',
               border: isRoot ? '2px solid #ff9800' : '1px solid #ccc',
@@ -81,7 +84,7 @@ function AncestryView() {
             flowNodes.push({
               id: String(node.id),
               position: { x, y },
-              data: { label: getDisplayName(node) },
+              data: { label: getDisplayName(node, locale) },
               style: {
                 background: isRoot ? '#fff3e0' : node.bioGender === 'Male' ? '#e3f2fd' : node.bioGender === 'Female' ? '#fce4ec' : '#f5f5f5',
                 border: isRoot ? '2px solid #ff9800' : '1px solid #ccc',
@@ -120,7 +123,7 @@ function AncestryView() {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, locale]);
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (_event, node) => {
@@ -131,14 +134,14 @@ function AncestryView() {
     [navigate, id]
   );
 
-  if (loading) return <div className="loading">Loading...</div>;
-  if (error) return <div className="error">Error: {error}</div>;
+  if (loading) return <div className="loading">{t('common.loading')}</div>;
+  if (error) return <div className="error">{t('common.error', { message: error })}</div>;
 
   return (
     <div className="graph-container">
       <div className="graph-toolbar">
-        <Link to="/graph" className="btn btn-secondary">Back to Graph</Link>
-        <Link to={`/persons/${id}`} className="btn btn-secondary">View Details: {personName}</Link>
+        <Link to="/graph" className="btn btn-secondary">{t('graph.backToGraph')}</Link>
+        <Link to={`/persons/${id}`} className="btn btn-secondary">{t('graph.viewDetails')}: {personName}</Link>
       </div>
       <ReactFlow
         nodes={nodes}

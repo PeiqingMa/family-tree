@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { createPerson, getPerson, updatePerson } from '../api';
 import type { PersonName, CreatePersonData } from '../types';
 
@@ -19,6 +20,7 @@ function emptyName(): NameEntry {
 function PersonForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const isEdit = !!id;
 
   const [names, setNames] = useState<NameEntry[]>([emptyName()]);
@@ -120,113 +122,113 @@ function PersonForm() {
     }
   };
 
-  if (loading) return <div className="loading">Loading...</div>;
+  if (loading) return <div className="loading">{t('common.loading')}</div>;
 
   return (
     <div className="page">
       <div className="page-header">
-        <h2>{isEdit ? 'Edit Person' : 'Add Person'}</h2>
+        <h2>{isEdit ? t('person.editPerson') : t('person.addPerson')}</h2>
       </div>
 
       {error && <div className="error">{error}</div>}
 
       <form className="person-form" onSubmit={handleSubmit}>
         <fieldset>
-          <legend>Names</legend>
+          <legend>{t('person.names')}</legend>
           {names.map((name, idx) => (
             <div key={idx} className="name-entry">
               <div className="form-row">
                 <div className="form-group">
-                  <label>Given Name</label>
+                  <label>{t('form.givenName')}</label>
                   <input type="text" value={name.givenName} onChange={(e) => handleNameChange(idx, 'givenName', e.target.value)} />
                 </div>
                 <div className="form-group">
-                  <label>Middle Name</label>
+                  <label>{t('form.middleName')}</label>
                   <input type="text" value={name.middleName} onChange={(e) => handleNameChange(idx, 'middleName', e.target.value)} />
                 </div>
                 <div className="form-group">
-                  <label>Family Name</label>
+                  <label>{t('form.familyName')}</label>
                   <input type="text" value={name.familyName} onChange={(e) => handleNameChange(idx, 'familyName', e.target.value)} />
                 </div>
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label>Full Name</label>
-                  <input type="text" value={name.fullName} onChange={(e) => handleNameChange(idx, 'fullName', e.target.value)} placeholder="Optional override" />
+                  <label>{t('form.fullName')}</label>
+                  <input type="text" value={name.fullName} onChange={(e) => handleNameChange(idx, 'fullName', e.target.value)} placeholder={t('form.optionalOverride')} />
                 </div>
                 <div className="form-group">
-                  <label>Name Type</label>
-                  <input type="text" value={name.nameType} onChange={(e) => handleNameChange(idx, 'nameType', e.target.value)} placeholder="e.g. birth, married" />
+                  <label>{t('form.nameType')}</label>
+                  <input type="text" value={name.nameType} onChange={(e) => handleNameChange(idx, 'nameType', e.target.value)} placeholder={t('form.nameTypePlaceholder')} />
                 </div>
                 {names.length > 1 && (
-                  <button type="button" className="btn btn-danger btn-sm" onClick={() => removeName(idx)}>Remove</button>
+                  <button type="button" className="btn btn-danger btn-sm" onClick={() => removeName(idx)}>{t('form.remove')}</button>
                 )}
               </div>
             </div>
           ))}
-          <button type="button" className="btn btn-secondary btn-sm" onClick={addName}>+ Add Name</button>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={addName}>{t('form.addName')}</button>
         </fieldset>
 
         <fieldset>
-          <legend>Personal Info</legend>
+          <legend>{t('person.personalInfo')}</legend>
           <div className="form-row">
             <div className="form-group">
-              <label>Biological Gender</label>
+              <label>{t('form.bioGender')}</label>
               <select value={bioGender} onChange={(e) => setBioGender(e.target.value)}>
-                <option value="">-- Select --</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-                <option value="Unknown">Unknown</option>
+                <option value="">{t('form.select')}</option>
+                <option value="Male">{t('gender.male')}</option>
+                <option value="Female">{t('gender.female')}</option>
+                <option value="Other">{t('gender.other')}</option>
+                <option value="Unknown">{t('gender.unknown')}</option>
               </select>
             </div>
             <div className="form-group">
-              <label>Social Gender</label>
+              <label>{t('form.socialGender')}</label>
               <input type="text" value={socialGender} onChange={(e) => setSocialGender(e.target.value)} />
             </div>
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Birth Date</label>
-              <input type="text" value={lifeFrom} onChange={(e) => setLifeFrom(e.target.value)} placeholder="YYYY-MM-DD" />
+              <label>{t('form.birthDate')}</label>
+              <input type="text" value={lifeFrom} onChange={(e) => setLifeFrom(e.target.value)} placeholder={t('form.datePlaceholder')} />
             </div>
             <div className="form-group">
-              <label>Death Date</label>
-              <input type="text" value={lifeEnd} onChange={(e) => setLifeEnd(e.target.value)} placeholder="YYYY-MM-DD" />
+              <label>{t('form.deathDate')}</label>
+              <input type="text" value={lifeEnd} onChange={(e) => setLifeEnd(e.target.value)} placeholder={t('form.datePlaceholder')} />
             </div>
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Birth Place</label>
+              <label>{t('form.birthPlace')}</label>
               <input type="text" value={birthPlace} onChange={(e) => setBirthPlace(e.target.value)} />
             </div>
             <div className="form-group">
-              <label>Death Place</label>
+              <label>{t('form.deathPlace')}</label>
               <input type="text" value={deathPlace} onChange={(e) => setDeathPlace(e.target.value)} />
             </div>
           </div>
           <div className="form-group full-width">
-            <label>Details</label>
+            <label>{t('form.details')}</label>
             <textarea value={details} onChange={(e) => setDetails(e.target.value)} rows={4} />
           </div>
         </fieldset>
 
         <fieldset>
-          <legend>Photos</legend>
+          <legend>{t('person.photos')}</legend>
           {photos.map((url, idx) => (
             <div key={idx} className="form-row">
               <div className="form-group" style={{ flex: 1 }}>
-                <input type="text" value={url} onChange={(e) => updatePhoto(idx, e.target.value)} placeholder="Photo URL" />
+                <input type="text" value={url} onChange={(e) => updatePhoto(idx, e.target.value)} placeholder={t('form.photoUrl')} />
               </div>
-              <button type="button" className="btn btn-danger btn-sm" onClick={() => removePhoto(idx)}>Remove</button>
+              <button type="button" className="btn btn-danger btn-sm" onClick={() => removePhoto(idx)}>{t('form.remove')}</button>
             </div>
           ))}
-          <button type="button" className="btn btn-secondary btn-sm" onClick={addPhoto}>+ Add Photo URL</button>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={addPhoto}>{t('form.addPhoto')}</button>
         </fieldset>
 
         <div className="form-actions">
-          <button type="submit" className="btn btn-primary">{isEdit ? 'Save Changes' : 'Create Person'}</button>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate(-1)}>Cancel</button>
+          <button type="submit" className="btn btn-primary">{isEdit ? t('person.saveChanges') : t('person.createPerson')}</button>
+          <button type="button" className="btn btn-secondary" onClick={() => navigate(-1)}>{t('person.cancel')}</button>
         </div>
       </form>
     </div>

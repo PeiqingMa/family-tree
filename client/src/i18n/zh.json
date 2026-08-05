@@ -1,0 +1,115 @@
+{
+  "nav": {
+    "familyTree": "家族树",
+    "tableView": "表格视图",
+    "graphView": "图谱视图",
+    "addPerson": "+ 添加成员"
+  },
+  "table": {
+    "title": "所有成员",
+    "total": "总计",
+    "emptyState": "暂无成员。点击「添加成员」开始添加。",
+    "name": "姓名",
+    "gender": "性别",
+    "birthDate": "出生日期",
+    "deathDate": "死亡日期",
+    "birthPlace": "出生地"
+  },
+  "graph": {
+    "title": "家族图谱",
+    "emptyState": "暂无成员。添加一些成员以查看图谱。",
+    "backToGraph": "返回图谱",
+    "viewDetails": "查看详情"
+  },
+  "person": {
+    "editPerson": "编辑成员",
+    "addPerson": "添加成员",
+    "basicInfo": "基本信息",
+    "names": "姓名",
+    "photos": "照片",
+    "details": "详情",
+    "parents": "父母",
+    "children": "子女",
+    "spouses": "配偶",
+    "edit": "编辑",
+    "delete": "删除",
+    "saveChanges": "保存更改",
+    "createPerson": "创建成员",
+    "cancel": "取消",
+    "notFound": "未找到成员",
+    "noNames": "暂无姓名记录。",
+    "noParents": "暂无父母记录。",
+    "noChildren": "暂无子女记录。",
+    "noSpouses": "暂无配偶记录。",
+    "confirmDelete": "确定删除 {{name}} 吗？",
+    "removeRelation": "确定移除此关系吗？",
+    "personalInfo": "个人信息"
+  },
+  "form": {
+    "givenName": "名",
+    "middleName": "中间名",
+    "familyName": "姓",
+    "fullName": "全名",
+    "nameType": "姓名类型",
+    "nameOrder": "姓名顺序",
+    "bioGender": "生理性别",
+    "socialGender": "社会性别",
+    "birthDate": "出生日期",
+    "deathDate": "死亡日期",
+    "birthPlace": "出生地",
+    "deathPlace": "死亡地",
+    "details": "详情",
+    "photoUrl": "照片URL",
+    "addName": "+ 添加姓名",
+    "addPhoto": "+ 添加照片URL",
+    "remove": "移除",
+    "addRelation": "+ 添加关系",
+    "optionalOverride": "可选覆盖",
+    "nameTypePlaceholder": "如：出生名、婚后名",
+    "datePlaceholder": "YYYY-MM-DD",
+    "select": "-- 选择 --",
+    "selectPerson": "-- 选择成员 --"
+  },
+  "relation": {
+    "type": "关系类型",
+    "subType": "关系子类型",
+    "parent": "父母",
+    "child": "子女",
+    "spouse": "配偶",
+    "marriageDate": "结婚日期",
+    "endDate": "结束日期",
+    "createNew": "创建新成员",
+    "selectPerson": "选择成员",
+    "addRelation": "添加关系",
+    "optional": "可选",
+    "pleaseSelect": "请选择一位成员",
+    "from": "从",
+    "to": "到"
+  },
+  "gender": {
+    "male": "男",
+    "female": "女",
+    "other": "其他",
+    "unknown": "未知"
+  },
+  "parentSubType": {
+    "BioFather": "生父",
+    "BioMother": "生母",
+    "FosterFather": "养父",
+    "FosterMother": "养母",
+    "Unknown": "未知"
+  },
+  "childSubType": {
+    "Bio": "亲生",
+    "Adopted": "收养"
+  },
+  "common": {
+    "loading": "加载中...",
+    "error": "错误：{{message}}",
+    "removeRelation": "移除关系"
+  },
+  "language": {
+    "en": "English",
+    "zh": "中文"
+  }
+}
