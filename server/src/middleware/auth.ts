@@ -1,8 +1,19 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AuthPayload } from '../models/user';
+import { getDb } from '../database';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'family-tree-secret-key';
+const DEFAULT_SECRET = 'family-tree-secret-key';
+
+if (!process.env.JWT_SECRET) {
+  console.warn(
+    'WARNING: JWT_SECRET environment variable is not set. ' +
+    'Using an insecure default secret. ' +
+    'Set JWT_SECRET in production to a strong, random value.'
+  );
+}
+
+const JWT_SECRET = process.env.JWT_SECRET || DEFAULT_SECRET;
 
 export { JWT_SECRET };
 
@@ -53,16 +64,35 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
 
 /**
  * Middleware that rejects requests from non-admin users (403).
+ * Re-validates the user's role from the database to handle role changes
+ * that occur after token issuance.
  * Must be used after requireAuth.
  */
-export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
+export async function requireAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
   if (!req.user) {
     res.status(401).json({ error: 'Authentication required' });
     return;
   }
-  if (req.user.role !== 'admin') {
-    res.status(403).json({ error: 'Admin access required' });
-    return;
+
+  try {
+    // Re-read role from DB to catch role changes since token was issued
+    const db = getDb();
+    const user = await db('users').where('id', req.user.userId).first();
+
+    if (!user) {
+      res.status(401).json({ error: 'User no longer exists' });
+      return;
+    }
+
+    if (user.role !== 'admin') {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+
+    // Update req.user.role with the current DB value
+    req.user.role = user.role;
+    next();
+  } catch {
+    res.status(500).json({ error: 'Failed to verify admin access' });
   }
-  next();
 }

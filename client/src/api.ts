@@ -69,6 +69,11 @@ export async function deleteUser(id: string): Promise<void> {
   await api.delete(`/users/${id}`);
 }
 
+export async function changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+  const res = await api.post('/auth/change-password', { currentPassword, newPassword });
+  return res.data;
+}
+
 // Person API functions
 export async function getPersons(): Promise<Person[]> {
   const res = await api.get('/persons');

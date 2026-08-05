@@ -64,7 +64,7 @@
     "addPhoto": "+ Add Photo URL",
     "remove": "Remove",
     "addRelation": "+ Add Relation",
-    "optionalOverride": "Optional override",
+    "optionalOverride": "Optional override (disables locale formatting)",
     "nameTypePlaceholder": "e.g. birth, married",
     "datePlaceholder": "YYYY-MM-DD",
     "select": "-- Select --",
@@ -127,6 +127,12 @@
     "roleUser": "User",
     "roleAdmin": "Admin",
     "actions": "Actions",
-    "confirmDeleteUser": "Delete user {{username}}?"
+    "confirmDeleteUser": "Delete user {{username}}?",
+    "changePassword": "Change Password",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmNewPassword": "Confirm New Password",
+    "passwordChanged": "Password changed successfully",
+    "passwordTooShort": "Password must be at least 6 characters"
   }
 }

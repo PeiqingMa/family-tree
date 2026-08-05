@@ -49,6 +49,9 @@ function Layout({ children }: LayoutProps) {
           {isAuthenticated ? (
             <div className="auth-info">
               <span className="username">{user?.username}</span>
+              <Link to="/change-password" className="btn btn-secondary btn-sm">
+                {t('auth.changePassword')}
+              </Link>
               <button className="btn btn-secondary btn-sm" onClick={logout}>
                 {t('auth.logout')}
               </button>

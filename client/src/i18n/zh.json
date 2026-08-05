@@ -64,7 +64,7 @@
     "addPhoto": "+ 添加照片URL",
     "remove": "移除",
     "addRelation": "+ 添加关系",
-    "optionalOverride": "可选覆盖",
+    "optionalOverride": "可选覆盖（将禁用语言格式化）",
     "nameTypePlaceholder": "如：出生名、婚后名",
     "datePlaceholder": "YYYY-MM-DD",
     "select": "-- 选择 --",
@@ -127,6 +127,12 @@
     "roleUser": "用户",
     "roleAdmin": "管理员",
     "actions": "操作",
-    "confirmDeleteUser": "确定删除用户 {{username}} 吗？"
+    "confirmDeleteUser": "确定删除用户 {{username}} 吗？",
+    "changePassword": "修改密码",
+    "currentPassword": "当前密码",
+    "newPassword": "新密码",
+    "confirmNewPassword": "确认新密码",
+    "passwordChanged": "密码修改成功",
+    "passwordTooShort": "密码至少需要6个字符"
   }
 }

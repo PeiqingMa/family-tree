@@ -50,7 +50,7 @@ router.post('/register', async (req: Request, res: Response) => {
       role: 'user',
     };
 
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
 
     res.status(201).json({
       token,
@@ -92,7 +92,7 @@ router.post('/login', async (req: Request, res: Response) => {
       role: user.role,
     };
 
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
 
     res.json({
       token,
@@ -126,6 +126,41 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to get user info' });
+  }
+});
+
+// POST /api/auth/change-password - change the current user's password
+router.post('/change-password', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const db = getDb();
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current password and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    }
+
+    const user = await db('users').where('id', req.user!.userId).first();
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const validPassword = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    await db('users').where('id', req.user!.userId).update({
+      password_hash: newPasswordHash,
+    });
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to change password' });
   }
 });
 

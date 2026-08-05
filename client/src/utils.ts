@@ -5,6 +5,8 @@ type Displayable = Person | GraphNode | RelationPerson | TreeNode;
 export function getDisplayName(person: Displayable, locale: string = 'en'): string {
   if (!person.names || person.names.length === 0) return 'Unknown';
   const name = person.names[0];
+  // fullName is a verbatim override - it bypasses locale-specific formatting.
+  // Users setting fullName should be aware that language switching will not affect display.
   if (name.fullName) return name.fullName;
 
   if (locale === 'zh') {
@@ -35,6 +37,7 @@ export function getDisplayName(person: Displayable, locale: string = 'en'): stri
 }
 
 export function getNameDisplay(name: PersonName, locale: string = 'en'): string {
+  // fullName is a verbatim override - it bypasses locale-specific formatting.
   if (name.fullName) return name.fullName;
 
   if (locale === 'zh') {
