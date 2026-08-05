@@ -5,47 +5,498 @@ import {
   ReactFlow,
   Background,
   Controls,
+  Position,
+  MarkerType,
   type Node,
   type Edge,
   type NodeMouseHandler,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import dagre from 'dagre';
 import { getGraph } from '../api';
-import type { GraphData } from '../types';
+import type { GraphData, GraphEdge } from '../types';
 import { getDisplayName, getBirthYear } from '../utils';
 
 const NODE_WIDTH = 172;
 const NODE_HEIGHT = 50;
+const SPOUSE_GAP = 50;
+const FAMILY_UNIT_GAP = 100;
+const GENERATION_GAP = 150;
 
-function getLayoutedElements(nodes: Node[], edges: Edge[]) {
-  const dagreGraph = new dagre.graphlib.Graph();
-  dagreGraph.setDefaultEdgeLabel(() => ({}));
-  dagreGraph.setGraph({ rankdir: 'TB', nodesep: 80, ranksep: 150 });
+// --- Family Tree Layout Algorithm ---
 
-  nodes.forEach((node) => {
-    dagreGraph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
-  });
+interface FamilyUnit {
+  parents: string[]; // 1 or 2 person IDs (couple or single parent)
+  children: string[];
+}
 
-  edges.forEach((edge) => {
-    dagreGraph.setEdge(edge.source, edge.target);
-  });
+interface LayoutPosition {
+  x: number;
+  y: number;
+}
 
-  dagre.layout(dagreGraph);
+/**
+ * Build family structure from edges:
+ * - Identify spouse pairs
+ * - Identify parent-child relationships
+ * - Deduplicate bidirectional edges
+ */
+function buildFamilyStructure(edges: GraphEdge[]) {
+  const spousePairs: Set<string> = new Set();
+  const parentChildMap: Map<string, Set<string>> = new Map(); // parent -> children
+  const childParentMap: Map<string, Set<string>> = new Map(); // child -> parents
 
-  const layoutedNodes = nodes.map((node) => {
-    const nodeWithPosition = dagreGraph.node(node.id);
+  for (const edge of edges) {
+    if (edge.relationType === 'spouse') {
+      const key = [edge.fromPersonId, edge.toPersonId].sort().join('-');
+      spousePairs.add(key);
+    } else if (edge.relationType === 'child') {
+      // from=parent, to=child
+      const parentId = String(edge.fromPersonId);
+      const childId = String(edge.toPersonId);
+      if (!parentChildMap.has(parentId)) parentChildMap.set(parentId, new Set());
+      parentChildMap.get(parentId)!.add(childId);
+      if (!childParentMap.has(childId)) childParentMap.set(childId, new Set());
+      childParentMap.get(childId)!.add(parentId);
+    } else if (edge.relationType === 'parent') {
+      // from=child, to=parent
+      const childId = String(edge.fromPersonId);
+      const parentId = String(edge.toPersonId);
+      if (!parentChildMap.has(parentId)) parentChildMap.set(parentId, new Set());
+      parentChildMap.get(parentId)!.add(childId);
+      if (!childParentMap.has(childId)) childParentMap.set(childId, new Set());
+      childParentMap.get(childId)!.add(parentId);
+    }
+  }
+
+  return { spousePairs, parentChildMap, childParentMap };
+}
+
+/**
+ * Determine generation (depth) for each person.
+ * Root nodes (no parents) are generation 0.
+ */
+function assignGenerations(
+  nodeIds: string[],
+  childParentMap: Map<string, Set<string>>
+): Map<string, number> {
+  const generations: Map<string, number> = new Map();
+
+  function getGeneration(id: string, visited: Set<string>): number {
+    if (generations.has(id)) return generations.get(id)!;
+    if (visited.has(id)) return 0; // cycle protection
+    visited.add(id);
+
+    const parents = childParentMap.get(id);
+    if (!parents || parents.size === 0) {
+      generations.set(id, 0);
+      return 0;
+    }
+
+    let maxParentGen = 0;
+    for (const parentId of parents) {
+      const parentGen = getGeneration(parentId, visited);
+      maxParentGen = Math.max(maxParentGen, parentGen);
+    }
+
+    const gen = maxParentGen + 1;
+    generations.set(id, gen);
+    return gen;
+  }
+
+  for (const id of nodeIds) {
+    getGeneration(id, new Set());
+  }
+
+  return generations;
+}
+
+/**
+ * Build family units: groups of (couple or single parent) + their shared children
+ */
+function buildFamilyUnits(
+  spousePairs: Set<string>,
+  parentChildMap: Map<string, Set<string>>,
+  nodeIds: string[]
+): FamilyUnit[] {
+  const units: FamilyUnit[] = [];
+  const processedAsParent: Set<string> = new Set();
+
+  // First, process spouse pairs to find couple-based family units
+  for (const pairKey of spousePairs) {
+    const [p1, p2] = pairKey.split('-');
+    const children1 = parentChildMap.get(p1) || new Set<string>();
+    const children2 = parentChildMap.get(p2) || new Set<string>();
+
+    // Shared children are those that both parents have
+    const sharedChildren: string[] = [];
+    for (const child of children1) {
+      if (children2.has(child)) {
+        sharedChildren.push(child);
+      }
+    }
+
+    units.push({
+      parents: [p1, p2],
+      children: sharedChildren,
+    });
+
+    processedAsParent.add(p1);
+    processedAsParent.add(p2);
+
+    // Handle children that belong to only one parent in this couple
+    for (const child of children1) {
+      if (!children2.has(child)) {
+        // Check if this child is shared with another spouse of p1
+        // Will be handled by other spouse pair iterations
+      }
+    }
+    for (const child of children2) {
+      if (!children1.has(child)) {
+        // Same as above
+      }
+    }
+  }
+
+  // Then, process single parents (people with children but no spouse pair covering them)
+  for (const [parentId, children] of parentChildMap) {
+    if (processedAsParent.has(parentId)) {
+      // Check for children not covered by any couple unit
+      const coveredChildren = new Set<string>();
+      for (const unit of units) {
+        if (unit.parents.includes(parentId)) {
+          for (const child of unit.children) {
+            coveredChildren.add(child);
+          }
+        }
+      }
+      const uncoveredChildren = [...children].filter(c => !coveredChildren.has(c));
+      if (uncoveredChildren.length > 0) {
+        units.push({
+          parents: [parentId],
+          children: uncoveredChildren,
+        });
+      }
+    } else {
+      units.push({
+        parents: [parentId],
+        children: [...children],
+      });
+      processedAsParent.add(parentId);
+    }
+  }
+
+  return units;
+}
+
+/**
+ * Custom family tree layout algorithm
+ */
+function familyTreeLayout(
+  flowNodes: Node[],
+  edges: GraphEdge[]
+): { nodes: Node[]; edges: Edge[] } {
+  if (flowNodes.length === 0) return { nodes: [], edges: [] };
+
+  const nodeIds = flowNodes.map(n => n.id);
+  const { spousePairs, parentChildMap, childParentMap } = buildFamilyStructure(edges);
+  const generations = assignGenerations(nodeIds, childParentMap);
+
+  // Group nodes by generation
+  const genGroups: Map<number, string[]> = new Map();
+  for (const [id, gen] of generations) {
+    if (!genGroups.has(gen)) genGroups.set(gen, []);
+    genGroups.get(gen)!.push(id);
+  }
+
+  // Build family units
+  const familyUnits = buildFamilyUnits(spousePairs, parentChildMap, nodeIds);
+
+  // Position tracking
+  const positions: Map<string, LayoutPosition> = new Map();
+
+  // Sort generations
+  const sortedGens = [...genGroups.keys()].sort((a, b) => a - b);
+
+  // Track which nodes have been positioned
+  const positioned: Set<string> = new Set();
+
+  // Layout generation by generation
+  for (const gen of sortedGens) {
+    const y = gen * (NODE_HEIGHT + GENERATION_GAP);
+    const nodesInGen = genGroups.get(gen)!;
+
+    // Find family units relevant to this generation (parents at this gen)
+    const unitsAtGen = familyUnits.filter(unit =>
+      unit.parents.some(p => generations.get(p) === gen)
+    );
+
+    let xOffset = 0;
+
+    // First, lay out nodes that are part of family units
+    for (const unit of unitsAtGen) {
+      const parentsInGen = unit.parents.filter(p => generations.get(p) === gen);
+
+      if (parentsInGen.length === 2) {
+        // Couple: place side by side
+        const [p1, p2] = parentsInGen;
+        if (!positioned.has(p1)) {
+          positions.set(p1, { x: xOffset, y });
+          positioned.add(p1);
+        } else {
+          xOffset = positions.get(p1)!.x;
+        }
+        if (!positioned.has(p2)) {
+          positions.set(p2, { x: xOffset + NODE_WIDTH + SPOUSE_GAP, y });
+          positioned.add(p2);
+        }
+        xOffset = Math.max(xOffset + 2 * NODE_WIDTH + SPOUSE_GAP + FAMILY_UNIT_GAP,
+          (positions.get(p2)?.x || 0) + NODE_WIDTH + FAMILY_UNIT_GAP);
+      } else if (parentsInGen.length === 1) {
+        const p = parentsInGen[0];
+        if (!positioned.has(p)) {
+          positions.set(p, { x: xOffset, y });
+          positioned.add(p);
+          xOffset += NODE_WIDTH + FAMILY_UNIT_GAP;
+        }
+      }
+    }
+
+    // Then lay out remaining nodes in this generation that aren't part of any unit
+    for (const nodeId of nodesInGen) {
+      if (!positioned.has(nodeId)) {
+        positions.set(nodeId, { x: xOffset, y });
+        positioned.add(nodeId);
+        xOffset += NODE_WIDTH + FAMILY_UNIT_GAP;
+      }
+    }
+  }
+
+  // Second pass: center children below their parents
+  for (const unit of familyUnits) {
+    if (unit.children.length === 0) continue;
+
+    // Find center X of parents
+    const parentPositions = unit.parents
+      .map(p => positions.get(p))
+      .filter(Boolean) as LayoutPosition[];
+
+    if (parentPositions.length === 0) continue;
+
+    const parentCenterX = parentPositions.reduce((sum, pos) => sum + pos.x + NODE_WIDTH / 2, 0) / parentPositions.length;
+
+    // Calculate total width needed for children
+    const totalChildrenWidth = unit.children.length * NODE_WIDTH + (unit.children.length - 1) * SPOUSE_GAP;
+    const childStartX = parentCenterX - totalChildrenWidth / 2;
+
+    // Position children
+    for (let i = 0; i < unit.children.length; i++) {
+      const childId = unit.children[i];
+      const childGen = generations.get(childId);
+      if (childGen === undefined) continue;
+      const childY = childGen * (NODE_HEIGHT + GENERATION_GAP);
+      const childX = childStartX + i * (NODE_WIDTH + SPOUSE_GAP);
+
+      positions.set(childId, { x: childX, y: childY });
+    }
+  }
+
+  // Resolve overlaps within each generation
+  for (const gen of sortedGens) {
+    const nodesInGen = genGroups.get(gen)!;
+    // Sort by X position
+    const sortedNodes = nodesInGen
+      .filter(id => positions.has(id))
+      .sort((a, b) => (positions.get(a)!.x) - (positions.get(b)!.x));
+
+    for (let i = 1; i < sortedNodes.length; i++) {
+      const prev = positions.get(sortedNodes[i - 1])!;
+      const curr = positions.get(sortedNodes[i])!;
+      const minX = prev.x + NODE_WIDTH + SPOUSE_GAP;
+      if (curr.x < minX) {
+        curr.x = minX;
+      }
+    }
+  }
+
+  // Apply positions to nodes
+  const layoutedNodes: Node[] = flowNodes.map(node => {
+    const pos = positions.get(node.id) || { x: 0, y: 0 };
     return {
       ...node,
-      position: {
-        x: nodeWithPosition.x - NODE_WIDTH / 2,
-        y: nodeWithPosition.y - NODE_HEIGHT / 2,
-      },
+      position: { x: pos.x, y: pos.y },
+      sourcePosition: Position.Bottom,
+      targetPosition: Position.Top,
     };
   });
 
-  return { nodes: layoutedNodes, edges };
+  // Build edges with proper styling
+  const flowEdges: Edge[] = [];
+  const edgeKeys: Set<string> = new Set();
+
+  for (const edge of edges) {
+    if (edge.relationType === 'spouse') {
+      const key = [edge.fromPersonId, edge.toPersonId].sort().join('-spouse-');
+      if (edgeKeys.has(key)) continue;
+      edgeKeys.add(key);
+
+      const sourceId = String(edge.fromPersonId);
+      const targetId = String(edge.toPersonId);
+      const sourcePos = positions.get(sourceId);
+      const targetPos = positions.get(targetId);
+
+      // Determine which is left and which is right
+      let leftId = sourceId;
+      let rightId = targetId;
+      if (sourcePos && targetPos && sourcePos.x > targetPos.x) {
+        leftId = targetId;
+        rightId = sourceId;
+      }
+
+      flowEdges.push({
+        id: `spouse-${key}`,
+        source: leftId,
+        target: rightId,
+        sourceHandle: 'right',
+        targetHandle: 'left',
+        type: 'straight',
+        label: 'spouse',
+        style: {
+          stroke: '#e91e63',
+          strokeWidth: 2,
+        },
+        labelStyle: {
+          fontSize: '10px',
+          fill: '#e91e63',
+          fontWeight: 600,
+        },
+        labelBgStyle: {
+          fill: '#fff',
+          fillOpacity: 0.8,
+        },
+      });
+    } else {
+      // Parent-child edge
+      let parentId: string;
+      let childId: string;
+      if (edge.relationType === 'parent') {
+        childId = String(edge.fromPersonId);
+        parentId = String(edge.toPersonId);
+      } else {
+        parentId = String(edge.fromPersonId);
+        childId = String(edge.toPersonId);
+      }
+
+      const key = `${parentId}-child-${childId}`;
+      if (edgeKeys.has(key)) continue;
+      edgeKeys.add(key);
+
+      flowEdges.push({
+        id: `child-${key}`,
+        source: parentId,
+        target: childId,
+        sourceHandle: 'bottom',
+        targetHandle: 'top',
+        type: 'smoothstep',
+        label: 'children',
+        style: {
+          stroke: '#1976d2',
+          strokeWidth: 2,
+        },
+        labelStyle: {
+          fontSize: '10px',
+          fill: '#1976d2',
+          fontWeight: 600,
+        },
+        labelBgStyle: {
+          fill: '#fff',
+          fillOpacity: 0.8,
+        },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: '#1976d2',
+        },
+      });
+    }
+  }
+
+  return { nodes: layoutedNodes, edges: flowEdges };
 }
+
+// --- Custom Node with explicit handles ---
+
+function PersonNode({ data, style }: { data: Record<string, unknown>; style?: React.CSSProperties }) {
+  return (
+    <div style={style}>
+      {/* Left handle for spouse connections */}
+      <div
+        className="react-flow__handle react-flow__handle-left"
+        data-handleid="left"
+        style={{
+          position: 'absolute',
+          left: -4,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          width: 8,
+          height: 8,
+          background: '#e91e63',
+          borderRadius: '50%',
+          border: 'none',
+        }}
+      />
+      {/* Right handle for spouse connections */}
+      <div
+        className="react-flow__handle react-flow__handle-right"
+        data-handleid="right"
+        style={{
+          position: 'absolute',
+          right: -4,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          width: 8,
+          height: 8,
+          background: '#e91e63',
+          borderRadius: '50%',
+          border: 'none',
+        }}
+      />
+      {/* Top handle for parent connections */}
+      <div
+        className="react-flow__handle react-flow__handle-top"
+        data-handleid="top"
+        style={{
+          position: 'absolute',
+          top: -4,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 8,
+          height: 8,
+          background: '#1976d2',
+          borderRadius: '50%',
+          border: 'none',
+        }}
+      />
+      {/* Bottom handle for child connections */}
+      <div
+        className="react-flow__handle react-flow__handle-bottom"
+        data-handleid="bottom"
+        style={{
+          position: 'absolute',
+          bottom: -4,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 8,
+          height: 8,
+          background: '#1976d2',
+          borderRadius: '50%',
+          border: 'none',
+        }}
+      />
+      <div style={{ textAlign: 'center' }}>{data.label as string}</div>
+    </div>
+  );
+}
+
+const nodeTypes = { person: PersonNode };
 
 function GraphView() {
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -59,40 +510,25 @@ function GraphView() {
   useEffect(() => {
     getGraph()
       .then((data: GraphData) => {
-        const flowNodes: Node[] = data.nodes.map((node) => {
-          return {
-            id: String(node.id),
-            position: { x: 0, y: 0 },
-            data: {
-              label: `${getDisplayName(node, locale)}${getBirthYear(node) ? ` (${getBirthYear(node)})` : ''}`,
-            },
-            style: {
-              background: node.bioGender === 'Male' ? '#e3f2fd' : node.bioGender === 'Female' ? '#fce4ec' : '#f5f5f5',
-              border: '1px solid #ccc',
-              borderRadius: '8px',
-              padding: '10px',
-              fontSize: '12px',
-            },
-          };
-        });
-
-        const flowEdges: Edge[] = data.edges.map((edge) => ({
-          id: String(edge.id),
-          source: String(edge.relationType === 'parent' ? edge.toPersonId : edge.fromPersonId),
-          target: String(edge.relationType === 'parent' ? edge.fromPersonId : edge.toPersonId),
-          label: edge.relationType,
+        const flowNodes: Node[] = data.nodes.map((node) => ({
+          id: String(node.id),
+          type: 'person',
+          position: { x: 0, y: 0 },
+          data: {
+            label: `${getDisplayName(node, locale)}${getBirthYear(node) ? ` (${getBirthYear(node)})` : ''}`,
+          },
           style: {
-            stroke: edge.relationType === 'spouse' ? '#e91e63' : '#1976d2',
-            strokeWidth: 2,
+            background: node.bioGender === 'Male' ? '#e3f2fd' : node.bioGender === 'Female' ? '#fce4ec' : '#f5f5f5',
+            border: '1px solid #ccc',
+            borderRadius: '8px',
+            padding: '10px',
+            fontSize: '12px',
+            position: 'relative' as const,
+            minWidth: `${NODE_WIDTH}px`,
           },
-          labelStyle: {
-            fontSize: '10px',
-            fill: edge.relationType === 'spouse' ? '#e91e63' : '#1976d2',
-          },
-          animated: edge.relationType === 'spouse',
         }));
 
-        const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(flowNodes, flowEdges);
+        const { nodes: layoutedNodes, edges: layoutedEdges } = familyTreeLayout(flowNodes, data.edges);
         setNodes(layoutedNodes);
         setEdges(layoutedEdges);
       })
@@ -128,6 +564,7 @@ function GraphView() {
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        nodeTypes={nodeTypes}
         onNodeClick={onNodeClick}
         fitView
         attributionPosition="bottom-left"
