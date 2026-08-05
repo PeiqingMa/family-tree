@@ -48,7 +48,7 @@ function buildFamilyStructure(edges: GraphEdge[]) {
 
   for (const edge of edges) {
     if (edge.relationType === 'spouse') {
-      const key = [edge.fromPersonId, edge.toPersonId].sort().join('-');
+      const key = [edge.fromPersonId, edge.toPersonId].sort().join(':::');
       spousePairs.add(key);
     } else if (edge.relationType === 'child') {
       // from=parent, to=child
@@ -121,7 +121,7 @@ function assignGenerations(
   while (changed) {
     changed = false;
     for (const pairKey of spousePairs) {
-      const [p1, p2] = pairKey.split('-');
+      const [p1, p2] = pairKey.split(':::');
       const gen1 = generations.get(p1) ?? 0;
       const gen2 = generations.get(p2) ?? 0;
       if (gen1 !== gen2) {
@@ -173,7 +173,7 @@ function buildFamilyUnits(
 
   // First, process spouse pairs to find couple-based family units with shared children
   for (const pairKey of spousePairs) {
-    const [p1, p2] = pairKey.split('-');
+    const [p1, p2] = pairKey.split(':::');
     const children1 = parentChildMap.get(p1) || new Set<string>();
     const children2 = parentChildMap.get(p2) || new Set<string>();
 
@@ -453,7 +453,7 @@ function familyTreeLayout(
 
   for (const edge of edges) {
     if (edge.relationType === 'spouse') {
-      const key = [edge.fromPersonId, edge.toPersonId].sort().join('-spouse-');
+      const key = [edge.fromPersonId, edge.toPersonId].sort().join(':::spouse:::');
       if (edgeKeys.has(key)) continue;
       edgeKeys.add(key);
 
