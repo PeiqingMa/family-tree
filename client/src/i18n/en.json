@@ -19,7 +19,11 @@
     "title": "Family Graph",
     "emptyState": "No people added yet. Add some people to see the graph.",
     "backToGraph": "Back to Graph",
-    "viewDetails": "View Details"
+    "viewDetails": "View Details",
+    "viewFullDetails": "View Full Details",
+    "born": "Born",
+    "died": "Died",
+    "closePopup": "Close"
   },
   "person": {
     "editPerson": "Edit Person",

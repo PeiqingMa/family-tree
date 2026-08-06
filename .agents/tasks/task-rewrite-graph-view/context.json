@@ -1,0 +1,29 @@
+{
+  "project_type": "React + Vite + TypeScript SPA (monorepo client)",
+  "language": "TypeScript",
+  "build_system": "Vite 6 with React plugin, npm workspaces",
+  "test_framework": "No test framework configured in client package.json",
+  "build_command": "cd /projects/sandbox/family-tree/client && npm run build",
+  "test_command": "cd /projects/sandbox/family-tree/client && npx tsc --noEmit",
+  "verification_instructions": "1. Run tsc --noEmit to verify type-checking passes. 2. Run vite build to verify production build succeeds.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "cd /projects/sandbox/family-tree && npm install",
+  "environment_constraints": "OPEN_INTERNET - can install any npm packages. Node.js v22. Server must remain unchanged.",
+  "contribution_requirements": "Only modify frontend code (client/ directory). Server stays the same. API types and endpoints are fixed.",
+  "key_patterns": "- Uses react-router-dom v7 for routing. - Uses react-i18next for i18n (en.json, zh.json). - Uses axios API client in src/api.ts. - Utility functions in src/utils.ts: getDisplayName(person, locale), getBirthYear(person). - All styles in src/index.css. - Layout component provides sidebar navigation. - AuthContext for auth state. - Current graph uses @xyflow/react with custom layout (to be replaced). - GraphView route: /graph, AncestryView route: /graph/:id. - GraphNode type has: id, names, bioGender, lifeFrom, lifeEnd. - GraphEdge type has: id, fromPersonId, toPersonId, relationType (spouse/child/parent), subType, spouseFrom, spouseEnd.",
+  "relevant_files": [
+    "client/src/components/GraphView.tsx",
+    "client/src/components/AncestryView.tsx",
+    "client/src/App.tsx",
+    "client/src/api.ts",
+    "client/src/types.ts",
+    "client/src/utils.ts",
+    "client/src/index.css",
+    "client/src/i18n/en.json",
+    "client/src/i18n/zh.json",
+    "client/package.json",
+    "client/vite.config.ts",
+    "client/tsconfig.json"
+  ],
+  "directory_structure": "client/src/ - main source. client/src/components/ - all React components. client/src/contexts/ - AuthContext. client/src/i18n/ - translation files. client/src/api.ts - API client. client/src/types.ts - shared TS types. client/src/utils.ts - display helpers."
+}

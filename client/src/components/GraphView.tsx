@@ -1,658 +1,441 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import {
-  ReactFlow,
-  Background,
-  Controls,
-  Handle,
-  Position,
-  MarkerType,
-  type Node,
-  type Edge,
-  type NodeMouseHandler,
-} from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
-import { getGraph } from '../api';
-import type { GraphData, GraphEdge } from '../types';
+import * as d3 from 'd3';
+import { getGraph, getPerson } from '../api';
+import type { GraphData, PersonDetail } from '../types';
 import { getDisplayName, getBirthYear } from '../utils';
-
-const NODE_WIDTH = 172;
-const NODE_HEIGHT = 50;
-const SPOUSE_GAP = 50;
-const FAMILY_UNIT_GAP = 100;
-const GENERATION_GAP = 150;
-
-// --- Family Tree Layout Algorithm ---
-
-interface FamilyUnit {
-  parents: string[]; // 1 or 2 person IDs (couple or single parent)
-  children: string[];
-}
-
-interface LayoutPosition {
-  x: number;
-  y: number;
-}
-
-/**
- * Build family structure from edges:
- * - Identify spouse pairs
- * - Identify parent-child relationships
- * - Deduplicate bidirectional edges
- */
-function buildFamilyStructure(edges: GraphEdge[]) {
-  const spousePairs: Set<string> = new Set();
-  const parentChildMap: Map<string, Set<string>> = new Map(); // parent -> children
-  const childParentMap: Map<string, Set<string>> = new Map(); // child -> parents
-
-  for (const edge of edges) {
-    if (edge.relationType === 'spouse') {
-      const key = [edge.fromPersonId, edge.toPersonId].sort().join('-');
-      spousePairs.add(key);
-    } else if (edge.relationType === 'child') {
-      // from=parent, to=child
-      const parentId = String(edge.fromPersonId);
-      const childId = String(edge.toPersonId);
-      if (!parentChildMap.has(parentId)) parentChildMap.set(parentId, new Set());
-      parentChildMap.get(parentId)!.add(childId);
-      if (!childParentMap.has(childId)) childParentMap.set(childId, new Set());
-      childParentMap.get(childId)!.add(parentId);
-    } else if (edge.relationType === 'parent') {
-      // from=child, to=parent
-      const childId = String(edge.fromPersonId);
-      const parentId = String(edge.toPersonId);
-      if (!parentChildMap.has(parentId)) parentChildMap.set(parentId, new Set());
-      parentChildMap.get(parentId)!.add(childId);
-      if (!childParentMap.has(childId)) childParentMap.set(childId, new Set());
-      childParentMap.get(childId)!.add(parentId);
-    }
-  }
-
-  return { spousePairs, parentChildMap, childParentMap };
-}
-
-/**
- * Determine generation (depth) for each person.
- * Root nodes (no parents) are generation 0.
- * After initial assignment, spouses are unified to the same generation (the max
- * of the pair), and descendants are propagated so children are always deeper
- * than their parents.
- */
-function assignGenerations(
-  nodeIds: string[],
-  childParentMap: Map<string, Set<string>>,
-  spousePairs: Set<string>,
-  parentChildMap: Map<string, Set<string>>
-): Map<string, number> {
-  const generations: Map<string, number> = new Map();
-
-  // Step 1: Initial assignment based purely on parent-child ancestry
-  function getGeneration(id: string, visited: Set<string>): number {
-    if (generations.has(id)) return generations.get(id)!;
-    if (visited.has(id)) return 0; // cycle protection
-    visited.add(id);
-
-    const parents = childParentMap.get(id);
-    if (!parents || parents.size === 0) {
-      generations.set(id, 0);
-      return 0;
-    }
-
-    let maxParentGen = 0;
-    for (const parentId of parents) {
-      const parentGen = getGeneration(parentId, visited);
-      maxParentGen = Math.max(maxParentGen, parentGen);
-    }
-
-    const gen = maxParentGen + 1;
-    generations.set(id, gen);
-    return gen;
-  }
-
-  for (const id of nodeIds) {
-    getGeneration(id, new Set());
-  }
-
-  // Step 2: Unify spouse generations -- both spouses must be at the same level.
-  // We iterate until stable because unifying one pair may affect another pair
-  // through shared ancestry chains.
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const pairKey of spousePairs) {
-      const [p1, p2] = pairKey.split('-');
-      const gen1 = generations.get(p1) ?? 0;
-      const gen2 = generations.get(p2) ?? 0;
-      if (gen1 !== gen2) {
-        const maxGen = Math.max(gen1, gen2);
-        if (gen1 < maxGen) {
-          generations.set(p1, maxGen);
-          changed = true;
-        }
-        if (gen2 < maxGen) {
-          generations.set(p2, maxGen);
-          changed = true;
-        }
-      }
-    }
-
-    // Step 3: Propagate -- ensure every child's generation is strictly greater
-    // than all of its parents' generations. This handles cascading updates when
-    // a spouse was pulled down.
-    for (const id of nodeIds) {
-      const parents = childParentMap.get(id);
-      if (!parents || parents.size === 0) continue;
-      let maxParentGen = 0;
-      for (const parentId of parents) {
-        maxParentGen = Math.max(maxParentGen, generations.get(parentId) ?? 0);
-      }
-      const requiredGen = maxParentGen + 1;
-      if ((generations.get(id) ?? 0) < requiredGen) {
-        generations.set(id, requiredGen);
-        changed = true;
-      }
-    }
-  }
-
-  return generations;
-}
-
-/**
- * Build family units: groups of (couple or single parent) + their shared children.
- * Ensures every child is assigned to exactly one family unit.
- */
-function buildFamilyUnits(
-  spousePairs: Set<string>,
-  parentChildMap: Map<string, Set<string>>,
-  nodeIds: string[]
-): FamilyUnit[] {
-  const units: FamilyUnit[] = [];
-  // Track all children that have been assigned to a family unit
-  const assignedChildren: Set<string> = new Set();
-
-  // First, process spouse pairs to find couple-based family units with shared children
-  for (const pairKey of spousePairs) {
-    const [p1, p2] = pairKey.split('-');
-    const children1 = parentChildMap.get(p1) || new Set<string>();
-    const children2 = parentChildMap.get(p2) || new Set<string>();
-
-    // Shared children are those that both parents have
-    const sharedChildren: string[] = [];
-    for (const child of children1) {
-      if (children2.has(child)) {
-        sharedChildren.push(child);
-      }
-    }
-
-    units.push({
-      parents: [p1, p2],
-      children: sharedChildren,
-    });
-
-    for (const child of sharedChildren) {
-      assignedChildren.add(child);
-    }
-  }
-
-  // Second pass: for each parent, find children not yet assigned to any unit.
-  // These are children from previous relationships or single-parent situations.
-  for (const [parentId, children] of parentChildMap) {
-    const uncoveredChildren = [...children].filter(c => !assignedChildren.has(c));
-    if (uncoveredChildren.length > 0) {
-      units.push({
-        parents: [parentId],
-        children: uncoveredChildren,
-      });
-      for (const child of uncoveredChildren) {
-        assignedChildren.add(child);
-      }
-    }
-  }
-
-  return units;
-}
-
-/**
- * Custom family tree layout algorithm
- */
-function familyTreeLayout(
-  flowNodes: Node[],
-  edges: GraphEdge[]
-): { nodes: Node[]; edges: Edge[] } {
-  if (flowNodes.length === 0) return { nodes: [], edges: [] };
-
-  const nodeIds = flowNodes.map(n => n.id);
-  const { spousePairs, parentChildMap, childParentMap } = buildFamilyStructure(edges);
-  const generations = assignGenerations(nodeIds, childParentMap, spousePairs, parentChildMap);
-
-  // Group nodes by generation
-  const genGroups: Map<number, string[]> = new Map();
-  for (const [id, gen] of generations) {
-    if (!genGroups.has(gen)) genGroups.set(gen, []);
-    genGroups.get(gen)!.push(id);
-  }
-
-  // Build family units
-  const familyUnits = buildFamilyUnits(spousePairs, parentChildMap, nodeIds);
-
-  // Position tracking
-  const positions: Map<string, LayoutPosition> = new Map();
-
-  // Sort generations
-  const sortedGens = [...genGroups.keys()].sort((a, b) => a - b);
-
-  // Track which nodes have been positioned
-  const positioned: Set<string> = new Set();
-
-  // Layout generation by generation
-  for (const gen of sortedGens) {
-    const y = gen * (NODE_HEIGHT + GENERATION_GAP);
-    const nodesInGen = genGroups.get(gen)!;
-
-    // Find family units relevant to this generation (parents at this gen)
-    const unitsAtGen = familyUnits.filter(unit =>
-      unit.parents.some(p => generations.get(p) === gen)
-    );
-
-    let xOffset = 0;
-
-    // First, lay out nodes that are part of family units
-    for (const unit of unitsAtGen) {
-      const parentsInGen = unit.parents.filter(p => generations.get(p) === gen);
-
-      if (parentsInGen.length === 2) {
-        // Couple: place side by side
-        const [p1, p2] = parentsInGen;
-        if (!positioned.has(p1)) {
-          positions.set(p1, { x: xOffset, y });
-          positioned.add(p1);
-        } else {
-          xOffset = positions.get(p1)!.x;
-        }
-        if (!positioned.has(p2)) {
-          positions.set(p2, { x: xOffset + NODE_WIDTH + SPOUSE_GAP, y });
-          positioned.add(p2);
-        }
-        xOffset = Math.max(xOffset + 2 * NODE_WIDTH + SPOUSE_GAP + FAMILY_UNIT_GAP,
-          (positions.get(p2)?.x || 0) + NODE_WIDTH + FAMILY_UNIT_GAP);
-      } else if (parentsInGen.length === 1) {
-        const p = parentsInGen[0];
-        if (!positioned.has(p)) {
-          positions.set(p, { x: xOffset, y });
-          positioned.add(p);
-          xOffset += NODE_WIDTH + FAMILY_UNIT_GAP;
-        }
-      }
-    }
-
-    // Then lay out remaining nodes in this generation that aren't part of any unit
-    for (const nodeId of nodesInGen) {
-      if (!positioned.has(nodeId)) {
-        positions.set(nodeId, { x: xOffset, y });
-        positioned.add(nodeId);
-        xOffset += NODE_WIDTH + FAMILY_UNIT_GAP;
-      }
-    }
-  }
-
-  // Second pass: center children below their parents
-  for (const unit of familyUnits) {
-    if (unit.children.length === 0) continue;
-
-    // Find center X of parents
-    const parentPositions = unit.parents
-      .map(p => positions.get(p))
-      .filter(Boolean) as LayoutPosition[];
-
-    if (parentPositions.length === 0) continue;
-
-    const parentCenterX = parentPositions.reduce((sum, pos) => sum + pos.x + NODE_WIDTH / 2, 0) / parentPositions.length;
-
-    // Calculate total width needed for children
-    const totalChildrenWidth = unit.children.length * NODE_WIDTH + (unit.children.length - 1) * SPOUSE_GAP;
-    const childStartX = parentCenterX - totalChildrenWidth / 2;
-
-    // Position children
-    for (let i = 0; i < unit.children.length; i++) {
-      const childId = unit.children[i];
-      const childGen = generations.get(childId);
-      if (childGen === undefined) continue;
-      const childY = childGen * (NODE_HEIGHT + GENERATION_GAP);
-      const childX = childStartX + i * (NODE_WIDTH + SPOUSE_GAP);
-
-      positions.set(childId, { x: childX, y: childY });
-    }
-  }
-
-  // Third pass: resolve overlaps within each generation (runs AFTER centering)
-  // When resolving overlaps, propagate shifts to children of affected nodes
-  for (const gen of sortedGens) {
-    const nodesInGen = genGroups.get(gen)!;
-    // Sort by X position
-    const sortedNodes = nodesInGen
-      .filter(id => positions.has(id))
-      .sort((a, b) => (positions.get(a)!.x) - (positions.get(b)!.x));
-
-    for (let i = 1; i < sortedNodes.length; i++) {
-      const prev = positions.get(sortedNodes[i - 1])!;
-      const curr = positions.get(sortedNodes[i])!;
-      const minX = prev.x + NODE_WIDTH + SPOUSE_GAP;
-      if (curr.x < minX) {
-        const shift = minX - curr.x;
-        curr.x = minX;
-
-        // Propagate the shift to all nodes to the right in this generation
-        for (let j = i + 1; j < sortedNodes.length; j++) {
-          const node = positions.get(sortedNodes[j])!;
-          node.x += shift;
-        }
-      }
-    }
-  }
-
-  // Fourth pass: bottom-up adjustment to re-center parents above their children
-  // Process generations from deepest to shallowest
-  // Track parents already re-centered to avoid double-shifting in multi-unit cases (remarriage)
-  const recenteredParents: Set<string> = new Set();
-  const reversedGens = [...sortedGens].reverse();
-  for (const gen of reversedGens) {
-    // Find family units whose children are at a deeper generation
-    const unitsWithChildrenBelow = familyUnits.filter(unit => {
-      if (unit.children.length === 0) return false;
-      return unit.parents.some(p => generations.get(p) === gen);
-    });
-
-    for (const unit of unitsWithChildrenBelow) {
-      if (unit.children.length === 0) continue;
-
-      // Get current child positions
-      const childPositions = unit.children
-        .map(c => positions.get(c))
-        .filter(Boolean) as LayoutPosition[];
-      if (childPositions.length === 0) continue;
-
-      // Calculate the center of children
-      const childrenMinX = Math.min(...childPositions.map(p => p.x));
-      const childrenMaxX = Math.max(...childPositions.map(p => p.x + NODE_WIDTH));
-      const childrenCenterX = (childrenMinX + childrenMaxX) / 2;
-
-      // Calculate desired center of parents, skipping any already re-centered
-      const parentsInGen = unit.parents.filter(p => generations.get(p) === gen);
-      if (parentsInGen.length === 0) continue;
-
-      // Skip this unit if any parent has already been re-centered
-      // (prevents double-shifting for multi-unit parents like remarriages)
-      const hasRecenteredParent = parentsInGen.some(p => recenteredParents.has(p));
-      if (hasRecenteredParent) continue;
-
-      const parentPositions = parentsInGen
-        .map(p => positions.get(p))
-        .filter(Boolean) as LayoutPosition[];
-      if (parentPositions.length === 0) continue;
-
-      const parentsMinX = Math.min(...parentPositions.map(p => p.x));
-      const parentsMaxX = Math.max(...parentPositions.map(p => p.x + NODE_WIDTH));
-      const parentsCenterX = (parentsMinX + parentsMaxX) / 2;
-
-      // Shift parents to align their center above children center
-      const parentShift = childrenCenterX - parentsCenterX;
-      if (Math.abs(parentShift) > 1) {
-        for (const pId of parentsInGen) {
-          const pos = positions.get(pId);
-          if (pos) pos.x += parentShift;
-        }
-      }
-
-      // Mark these parents as re-centered
-      for (const pId of parentsInGen) {
-        recenteredParents.add(pId);
-      }
-    }
-  }
-
-  // Fifth pass: final overlap resolution after parent re-centering
-  // Propagate shifts rightward (same as pass 3) to prevent chain overlaps
-  for (const gen of sortedGens) {
-    const nodesInGen = genGroups.get(gen)!;
-    const sortedNodes = nodesInGen
-      .filter(id => positions.has(id))
-      .sort((a, b) => (positions.get(a)!.x) - (positions.get(b)!.x));
-
-    for (let i = 1; i < sortedNodes.length; i++) {
-      const prev = positions.get(sortedNodes[i - 1])!;
-      const curr = positions.get(sortedNodes[i])!;
-      const minX = prev.x + NODE_WIDTH + SPOUSE_GAP;
-      if (curr.x < minX) {
-        const shift = minX - curr.x;
-        curr.x = minX;
-
-        // Propagate the shift to all nodes to the right in this generation
-        for (let j = i + 1; j < sortedNodes.length; j++) {
-          const node = positions.get(sortedNodes[j])!;
-          node.x += shift;
-        }
-      }
-    }
-  }
-
-  // Apply positions to nodes
-  const layoutedNodes: Node[] = flowNodes.map(node => {
-    const pos = positions.get(node.id) || { x: 0, y: 0 };
-    return {
-      ...node,
-      position: { x: pos.x, y: pos.y },
-      sourcePosition: Position.Bottom,
-      targetPosition: Position.Top,
-    };
-  });
-
-  // Build edges with proper styling
-  const flowEdges: Edge[] = [];
-  const edgeKeys: Set<string> = new Set();
-
-  for (const edge of edges) {
-    if (edge.relationType === 'spouse') {
-      const key = [edge.fromPersonId, edge.toPersonId].sort().join('-spouse-');
-      if (edgeKeys.has(key)) continue;
-      edgeKeys.add(key);
-
-      const sourceId = String(edge.fromPersonId);
-      const targetId = String(edge.toPersonId);
-      const sourcePos = positions.get(sourceId);
-      const targetPos = positions.get(targetId);
-
-      // Determine which is left and which is right
-      let leftId = sourceId;
-      let rightId = targetId;
-      if (sourcePos && targetPos && sourcePos.x > targetPos.x) {
-        leftId = targetId;
-        rightId = sourceId;
-      }
-
-      flowEdges.push({
-        id: `spouse-${key}`,
-        source: leftId,
-        target: rightId,
-        sourceHandle: 'right',
-        targetHandle: 'left',
-        type: 'straight',
-        label: 'spouse',
-        style: {
-          stroke: '#e91e63',
-          strokeWidth: 2,
-        },
-        labelStyle: {
-          fontSize: '10px',
-          fill: '#e91e63',
-          fontWeight: 600,
-        },
-        labelBgStyle: {
-          fill: '#fff',
-          fillOpacity: 0.8,
-        },
-      });
-    } else {
-      // Parent-child edge
-      let parentId: string;
-      let childId: string;
-      if (edge.relationType === 'parent') {
-        childId = String(edge.fromPersonId);
-        parentId = String(edge.toPersonId);
-      } else {
-        parentId = String(edge.fromPersonId);
-        childId = String(edge.toPersonId);
-      }
-
-      const key = `${parentId}-child-${childId}`;
-      if (edgeKeys.has(key)) continue;
-      edgeKeys.add(key);
-
-      flowEdges.push({
-        id: `child-${key}`,
-        source: parentId,
-        target: childId,
-        sourceHandle: 'bottom',
-        targetHandle: 'top',
-        type: 'smoothstep',
-        label: 'children',
-        style: {
-          stroke: '#1976d2',
-          strokeWidth: 2,
-        },
-        labelStyle: {
-          fontSize: '10px',
-          fill: '#1976d2',
-          fontWeight: 600,
-        },
-        labelBgStyle: {
-          fill: '#fff',
-          fillOpacity: 0.8,
-        },
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          color: '#1976d2',
-        },
-      });
-    }
-  }
-
-  return { nodes: layoutedNodes, edges: flowEdges };
-}
-
-// --- Custom Node with proper Handle components ---
-
-function PersonNode({ data, style }: { data: Record<string, unknown>; style?: React.CSSProperties }) {
-  return (
-    <div style={style}>
-      {/* Left handle for spouse connections */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        id="left"
-        isConnectable={false}
-        style={{
-          width: 8,
-          height: 8,
-          background: '#e91e63',
-          border: 'none',
-        }}
-      />
-      {/* Right handle for spouse connections */}
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="right"
-        isConnectable={false}
-        style={{
-          width: 8,
-          height: 8,
-          background: '#e91e63',
-          border: 'none',
-        }}
-      />
-      {/* Top handle for parent connections (target from parent above) */}
-      <Handle
-        type="target"
-        position={Position.Top}
-        id="top"
-        isConnectable={false}
-        style={{
-          width: 8,
-          height: 8,
-          background: '#1976d2',
-          border: 'none',
-        }}
-      />
-      {/* Bottom handle for child connections (source to child below) */}
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="bottom"
-        isConnectable={false}
-        style={{
-          width: 8,
-          height: 8,
-          background: '#1976d2',
-          border: 'none',
-        }}
-      />
-      <div style={{ textAlign: 'center' }}>{data.label as string}</div>
-    </div>
-  );
-}
-
-const nodeTypes = { person: PersonNode };
+import {
+  buildLayout,
+  getAncestorIds,
+  getDescendantIds,
+  getSpouseIds,
+  NODE_RADIUS,
+  type LayoutNode,
+} from './graphLayout';
 
 function GraphView() {
-  const [nodes, setNodes] = useState<Node[]>([]);
-  const [edges, setEdges] = useState<Edge[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { id: urlPersonId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
 
+  const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [graphData, setGraphData] = useState<GraphData | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(urlPersonId || null);
+  const [popupPerson, setPopupPerson] = useState<PersonDetail | null>(null);
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupLoading, setPopupLoading] = useState(false);
+
+  // Store layout data for interaction handlers
+  const layoutRef = useRef<ReturnType<typeof buildLayout> | null>(null);
+  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+
+  // Click/dblclick debounce timer ref
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Drag state tracking to prevent deselection after pan
+  const isDraggedRef = useRef(false);
+
   useEffect(() => {
     getGraph()
-      .then((data: GraphData) => {
-        const flowNodes: Node[] = data.nodes.map((node) => ({
-          id: String(node.id),
-          type: 'person',
-          position: { x: 0, y: 0 },
-          data: {
-            label: `${getDisplayName(node, locale)}${getBirthYear(node) ? ` (${getBirthYear(node)})` : ''}`,
-          },
-          style: {
-            background: node.bioGender === 'Male' ? '#e3f2fd' : node.bioGender === 'Female' ? '#fce4ec' : '#f5f5f5',
-            border: '1px solid #ccc',
-            borderRadius: '8px',
-            padding: '10px',
-            fontSize: '12px',
-            position: 'relative' as const,
-            minWidth: `${NODE_WIDTH}px`,
-          },
-        }));
-
-        const { nodes: layoutedNodes, edges: layoutedEdges } = familyTreeLayout(flowNodes, data.edges);
-        setNodes(layoutedNodes);
-        setEdges(layoutedEdges);
-      })
+      .then((data: GraphData) => setGraphData(data))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [locale]);
+  }, []);
 
-  const onNodeClick: NodeMouseHandler = useCallback(
-    (_event, node) => {
-      navigate(`/graph/${node.id}`);
-    },
-    [navigate]
-  );
+  // When URL person ID changes, update selection
+  useEffect(() => {
+    if (urlPersonId) {
+      setSelectedId(urlPersonId);
+    }
+  }, [urlPersonId]);
+
+  // Main rendering effect - does NOT depend on selectedId
+  useEffect(() => {
+    if (!graphData || !svgRef.current || !containerRef.current) return;
+    if (graphData.nodes.length === 0) return;
+
+    const layout = buildLayout(graphData.nodes, graphData.edges);
+    layoutRef.current = layout;
+    const { layoutNodes, layoutLinks, positions, spousePairs, parentChildMap, childParentMap } = layout;
+
+    const svg = d3.select(svgRef.current);
+    svg.selectAll('*').remove();
+
+    const width = containerRef.current.clientWidth;
+    const height = containerRef.current.clientHeight;
+
+    svg.attr('width', width).attr('height', height);
+
+    // Zoom behavior with drag tracking
+    const g = svg.append('g').attr('class', 'graph-main');
+
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.1, 3])
+      .on('start', () => {
+        isDraggedRef.current = false;
+      })
+      .on('zoom', (event) => {
+        g.attr('transform', event.transform.toString());
+        // Mark as dragged if the event is from user interaction (not programmatic)
+        if (event.sourceEvent) {
+          isDraggedRef.current = true;
+        }
+      });
+
+    svg.call(zoom);
+    zoomRef.current = zoom;
+
+    // Draw links
+    const linksGroup = g.append('g').attr('class', 'links');
+
+    for (const link of layoutLinks) {
+      const sourcePos = positions.get(link.sourceId);
+      const targetPos = positions.get(link.targetId);
+      if (!sourcePos || !targetPos) continue;
+
+      if (link.type === 'spouse') {
+        linksGroup.append('line')
+          .attr('class', 'link-spouse')
+          .attr('data-source', link.sourceId)
+          .attr('data-target', link.targetId)
+          .attr('x1', sourcePos.x)
+          .attr('y1', sourcePos.y)
+          .attr('x2', targetPos.x)
+          .attr('y2', targetPos.y)
+          .attr('stroke', '#e91e63')
+          .attr('stroke-width', 2)
+          .attr('stroke-dasharray', link.isDivorced ? '6,4' : 'none');
+      } else {
+        const midY = sourcePos.y + (targetPos.y - sourcePos.y) / 2;
+        const path = `M ${sourcePos.x} ${sourcePos.y + NODE_RADIUS}
+                      L ${sourcePos.x} ${midY}
+                      L ${targetPos.x} ${midY}
+                      L ${targetPos.x} ${targetPos.y - NODE_RADIUS}`;
+        linksGroup.append('path')
+          .attr('class', 'link-parent-child')
+          .attr('data-source', link.sourceId)
+          .attr('data-target', link.targetId)
+          .attr('d', path)
+          .attr('fill', 'none')
+          .attr('stroke', '#90a4ae')
+          .attr('stroke-width', 1.5);
+      }
+    }
+
+    // Draw nodes
+    const nodesGroup = g.append('g').attr('class', 'nodes');
+
+    const nodeGroups = nodesGroup.selectAll<SVGGElement, LayoutNode>('g.node')
+      .data(layoutNodes, d => d.id)
+      .enter()
+      .append('g')
+      .attr('class', 'node')
+      .attr('data-id', d => d.id)
+      .attr('transform', d => `translate(${d.x}, ${d.y})`)
+      .attr('tabindex', '0')
+      .attr('role', 'button')
+      .attr('aria-label', d => getDisplayName(d.node, locale));
+
+    // Circle avatar
+    nodeGroups.append('circle')
+      .attr('r', NODE_RADIUS)
+      .attr('class', 'node-circle')
+      .attr('fill', d => {
+        if (d.node.bioGender === 'Male') return '#bbdefb';
+        if (d.node.bioGender === 'Female') return '#f8bbd0';
+        return '#e0e0e0';
+      })
+      .attr('stroke', d => {
+        if (d.node.bioGender === 'Male') return '#1976d2';
+        if (d.node.bioGender === 'Female') return '#c2185b';
+        return '#9e9e9e';
+      })
+      .attr('stroke-width', 2);
+
+    // Initials text inside circle
+    nodeGroups.append('text')
+      .attr('class', 'node-initials')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '0.35em')
+      .attr('font-size', '14px')
+      .attr('font-weight', '600')
+      .attr('fill', d => {
+        if (d.node.bioGender === 'Male') return '#1565c0';
+        if (d.node.bioGender === 'Female') return '#ad1457';
+        return '#616161';
+      })
+      .text(d => {
+        const name = d.node.names[0];
+        if (!name) return '?';
+        const f = name.familyName ? name.familyName[0] : '';
+        const g2 = name.givenName ? name.givenName[0] : '';
+        return (f + g2).toUpperCase() || '?';
+      });
+
+    // Name label below circle
+    nodeGroups.append('text')
+      .attr('class', 'node-name')
+      .attr('text-anchor', 'middle')
+      .attr('y', NODE_RADIUS + 16)
+      .attr('font-size', '11px')
+      .attr('font-weight', '500')
+      .attr('fill', '#212121')
+      .text(d => getDisplayName(d.node, locale));
+
+    // Life dates below name
+    nodeGroups.append('text')
+      .attr('class', 'node-dates')
+      .attr('text-anchor', 'middle')
+      .attr('y', NODE_RADIUS + 30)
+      .attr('font-size', '10px')
+      .attr('fill', '#757575')
+      .text(d => {
+        const birth = getBirthYear(d.node);
+        const death = d.node.lifeEnd ? d.node.lifeEnd.substring(0, 4) : '';
+        if (birth && death) return `${birth} - ${death}`;
+        if (birth) return `${birth} -`;
+        if (death) return `- ${death}`;
+        return '';
+      });
+
+    // Click handler with debounce to avoid flash on double-click
+    nodeGroups.on('click', function(event, d) {
+      event.stopPropagation();
+      // Clear any pending click timer (a new click or dblclick supersedes)
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
+      }
+      // Delay single-click action to differentiate from dblclick
+      clickTimerRef.current = setTimeout(() => {
+        clickTimerRef.current = null;
+        handleNodeClick(d.id);
+      }, 250);
+    });
+
+    // Double-click handler
+    nodeGroups.on('dblclick', function(event, d) {
+      event.stopPropagation();
+      event.preventDefault();
+      // Cancel pending single-click
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
+      }
+      handleNodeDblClick(d.id);
+    });
+
+    // Keyboard handler on nodes
+    nodeGroups.on('keydown', function(event, d) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        event.stopPropagation();
+        handleNodeClick(d.id);
+      }
+    });
+
+    // Click on background to deselect (skip if drag/pan just happened)
+    svg.on('click', () => {
+      if (isDraggedRef.current) {
+        isDraggedRef.current = false;
+        return;
+      }
+      setSelectedId(null);
+      clearHighlight();
+      if (urlPersonId) {
+        navigate('/graph');
+      }
+    });
+
+    // Initial fit view
+    const allX = layoutNodes.map(n => n.x);
+    const allY = layoutNodes.map(n => n.y);
+    const minX = Math.min(...allX) - NODE_RADIUS - 50;
+    const maxX = Math.max(...allX) + NODE_RADIUS + 50;
+    const minY = Math.min(...allY) - NODE_RADIUS - 50;
+    const maxY = Math.max(...allY) + NODE_RADIUS + 50;
+    const graphWidth = maxX - minX;
+    const graphHeight = maxY - minY;
+    const scale = Math.min(width / graphWidth, height / graphHeight, 1) * 0.9;
+    const tx = (width - graphWidth * scale) / 2 - minX * scale;
+    const ty = (height - graphHeight * scale) / 2 - minY * scale;
+
+    svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+
+    // If there's a pre-selected person (from URL), highlight after initial render
+    if (urlPersonId && positions.has(urlPersonId)) {
+      setTimeout(() => handleNodeClick(urlPersonId), 300);
+    }
+
+    function handleNodeClick(nodeId: string) {
+      setSelectedId(nodeId);
+      applyHighlight(nodeId);
+      animateToNode(nodeId);
+    }
+
+    function handleNodeDblClick(nodeId: string) {
+      // Show popup immediately with loading state
+      setPopupPerson(null);
+      setPopupLoading(true);
+      setShowPopup(true);
+      getPerson(nodeId)
+        .then(detail => {
+          setPopupPerson(detail);
+        })
+        .catch(console.error)
+        .finally(() => {
+          setPopupLoading(false);
+        });
+    }
+
+    function applyHighlight(nodeId: string) {
+      const ancestors = getAncestorIds(nodeId, childParentMap);
+      const descendants = getDescendantIds(nodeId, parentChildMap);
+      const spouses = getSpouseIds(nodeId, spousePairs);
+      const highlighted = new Set<string>([nodeId, ...ancestors, ...descendants, ...spouses]);
+
+      nodesGroup.selectAll<SVGGElement, LayoutNode>('g.node')
+        .classed('dimmed', d => !highlighted.has(d.id))
+        .classed('highlighted', d => highlighted.has(d.id))
+        .classed('selected-node', d => d.id === nodeId);
+
+      linksGroup.selectAll<SVGLineElement, unknown>('line.link-spouse')
+        .classed('dimmed', function() {
+          const s = this.getAttribute('data-source')!;
+          const t2 = this.getAttribute('data-target')!;
+          return !highlighted.has(s) || !highlighted.has(t2);
+        });
+
+      linksGroup.selectAll<SVGPathElement, unknown>('path.link-parent-child')
+        .classed('dimmed', function() {
+          const s = this.getAttribute('data-source')!;
+          const t2 = this.getAttribute('data-target')!;
+          return !highlighted.has(s) || !highlighted.has(t2);
+        });
+    }
+
+    function clearHighlight() {
+      nodesGroup.selectAll('g.node')
+        .classed('dimmed', false)
+        .classed('highlighted', false)
+        .classed('selected-node', false);
+      linksGroup.selectAll('line.link-spouse').classed('dimmed', false);
+      linksGroup.selectAll('path.link-parent-child').classed('dimmed', false);
+    }
+
+    function animateToNode(nodeId: string) {
+      const pos = positions.get(nodeId);
+      if (!pos) return;
+      const targetScale = 1.2;
+      const tx2 = width / 2 - pos.x * targetScale;
+      const ty2 = height / 2 - pos.y * targetScale;
+      svg.transition()
+        .duration(600)
+        .call(zoom.transform, d3.zoomIdentity.translate(tx2, ty2).scale(targetScale));
+    }
+
+    // Cleanup click timer on unmount
+    return () => {
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
+      }
+    };
+  }, [graphData, locale, urlPersonId, navigate]);
+
+  // Separate effect for handling selection changes without full SVG rebuild
+  useEffect(() => {
+    if (!svgRef.current || !layoutRef.current) return;
+    // Only run when selectedId changes after initial render (not from URL preset)
+    const { positions, spousePairs, parentChildMap, childParentMap } = layoutRef.current;
+
+    const svg = d3.select(svgRef.current);
+    const nodesGroup = svg.select<SVGGElement>('g.nodes');
+    const linksGroup = svg.select<SVGGElement>('g.links');
+
+    if (nodesGroup.empty() || linksGroup.empty()) return;
+
+    if (!selectedId) {
+      // Clear all highlights
+      nodesGroup.selectAll('g.node')
+        .classed('dimmed', false)
+        .classed('highlighted', false)
+        .classed('selected-node', false);
+      linksGroup.selectAll('line.link-spouse').classed('dimmed', false);
+      linksGroup.selectAll('path.link-parent-child').classed('dimmed', false);
+      return;
+    }
+
+    if (!positions.has(selectedId)) return;
+
+    const ancestors = getAncestorIds(selectedId, childParentMap);
+    const descendants = getDescendantIds(selectedId, parentChildMap);
+    const spouses = getSpouseIds(selectedId, spousePairs);
+    const highlighted = new Set<string>([selectedId, ...ancestors, ...descendants, ...spouses]);
+
+    nodesGroup.selectAll<SVGGElement, LayoutNode>('g.node')
+      .classed('dimmed', d => !highlighted.has(d.id))
+      .classed('highlighted', d => highlighted.has(d.id))
+      .classed('selected-node', d => d.id === selectedId);
+
+    linksGroup.selectAll<SVGLineElement, unknown>('line.link-spouse')
+      .classed('dimmed', function() {
+        const s = this.getAttribute('data-source')!;
+        const t2 = this.getAttribute('data-target')!;
+        return !highlighted.has(s) || !highlighted.has(t2);
+      });
+
+    linksGroup.selectAll<SVGPathElement, unknown>('path.link-parent-child')
+      .classed('dimmed', function() {
+        const s = this.getAttribute('data-source')!;
+        const t2 = this.getAttribute('data-target')!;
+        return !highlighted.has(s) || !highlighted.has(t2);
+      });
+
+    // Animate to the selected node
+    if (zoomRef.current && containerRef.current) {
+      const pos = positions.get(selectedId);
+      if (pos) {
+        const width = containerRef.current.clientWidth;
+        const height = containerRef.current.clientHeight;
+        const targetScale = 1.2;
+        const tx = width / 2 - pos.x * targetScale;
+        const ty = height / 2 - pos.y * targetScale;
+        const svg2 = d3.select(svgRef.current);
+        svg2.transition()
+          .duration(600)
+          .call(zoomRef.current.transform, d3.zoomIdentity.translate(tx, ty).scale(targetScale));
+      }
+    }
+  }, [selectedId]);
+
+  const handleClosePopup = useCallback(() => {
+    setShowPopup(false);
+    setPopupPerson(null);
+    setPopupLoading(false);
+  }, []);
+
+  // Global keyboard handler for Escape to close popup
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && showPopup) {
+        handleClosePopup();
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showPopup, handleClosePopup]);
 
   if (loading) return <div className="loading">{t('common.loading')}</div>;
   if (error) return <div className="error">{t('common.error', { message: error })}</div>;
 
-  if (nodes.length === 0) {
+  if (!graphData || graphData.nodes.length === 0) {
     return (
       <div className="page">
         <div className="page-header">
@@ -666,18 +449,129 @@ function GraphView() {
   }
 
   return (
-    <div className="graph-container">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        onNodeClick={onNodeClick}
-        fitView
-        attributionPosition="bottom-left"
-      >
-        <Background />
-        <Controls />
-      </ReactFlow>
+    <div className="graph-container" ref={containerRef}>
+      <svg ref={svgRef} className="graph-svg" />
+      {showPopup && (
+        <PersonPopup
+          person={popupPerson}
+          loading={popupLoading}
+          locale={locale}
+          onClose={handleClosePopup}
+          onNavigate={(personId) => {
+            handleClosePopup();
+            navigate(`/persons/${personId}`);
+          }}
+          t={t}
+        />
+      )}
+    </div>
+  );
+}
+
+interface PersonPopupProps {
+  person: PersonDetail | null;
+  loading: boolean;
+  locale: string;
+  onClose: () => void;
+  onNavigate: (id: string) => void;
+  t: (key: string) => string;
+}
+
+function PersonPopup({ person, loading, locale, onClose, onNavigate, t }: PersonPopupProps) {
+  const popupRef = useRef<HTMLDivElement>(null);
+
+  // Focus trap: focus the popup when it opens
+  useEffect(() => {
+    if (popupRef.current) {
+      popupRef.current.focus();
+    }
+  }, []);
+
+  if (loading || !person) {
+    return (
+      <div className="graph-popup-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label={t('common.loading')}>
+        <div className="graph-popup" onClick={e => e.stopPropagation()} ref={popupRef} tabIndex={-1}>
+          <button className="graph-popup-close" onClick={onClose} aria-label={t('graph.closePopup')}>&times;</button>
+          <div className="graph-popup-loading">
+            <div className="graph-popup-spinner" />
+            <span>{t('common.loading')}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const displayName = getDisplayName(person, locale);
+  const birthYear = person.lifeFrom ? person.lifeFrom.substring(0, 10) : '';
+  const deathDate = person.lifeEnd ? person.lifeEnd.substring(0, 10) : '';
+
+  return (
+    <div className="graph-popup-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label={displayName}>
+      <div className="graph-popup" onClick={e => e.stopPropagation()} ref={popupRef} tabIndex={-1}>
+        <button className="graph-popup-close" onClick={onClose} aria-label={t('graph.closePopup')}>&times;</button>
+        <h3 className="graph-popup-name">{displayName}</h3>
+
+        <div className="graph-popup-info">
+          {person.bioGender && (
+            <div className="graph-popup-row">
+              <span className="graph-popup-label">{t('form.bioGender')}:</span>
+              <span>{t(`gender.${person.bioGender.toLowerCase()}`)}</span>
+            </div>
+          )}
+          {birthYear && (
+            <div className="graph-popup-row">
+              <span className="graph-popup-label">{t('graph.born')}:</span>
+              <span>{birthYear}{person.birthPlace ? `, ${person.birthPlace}` : ''}</span>
+            </div>
+          )}
+          {deathDate && (
+            <div className="graph-popup-row">
+              <span className="graph-popup-label">{t('graph.died')}:</span>
+              <span>{deathDate}{person.deathPlace ? `, ${person.deathPlace}` : ''}</span>
+            </div>
+          )}
+        </div>
+
+        {person.parents.length > 0 && (
+          <div className="graph-popup-section">
+            <h4>{t('person.parents')}</h4>
+            <ul>
+              {person.parents.map(rel => (
+                <li key={rel.relationId}>{getDisplayName(rel.person, locale)}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {person.spouses.length > 0 && (
+          <div className="graph-popup-section">
+            <h4>{t('person.spouses')}</h4>
+            <ul>
+              {person.spouses.map(rel => (
+                <li key={rel.relationId}>{getDisplayName(rel.person, locale)}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {person.children.length > 0 && (
+          <div className="graph-popup-section">
+            <h4>{t('person.children')}</h4>
+            <ul>
+              {person.children.map(rel => (
+                <li key={rel.relationId}>{getDisplayName(rel.person, locale)}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <button
+          className="btn btn-primary graph-popup-link"
+          onClick={() => onNavigate(person.id)}
+        >
+          {t('graph.viewFullDetails')}
+        </button>
+      </div>
     </div>
   );
 }

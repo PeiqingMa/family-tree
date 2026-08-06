@@ -19,7 +19,11 @@
     "title": "家族图谱",
     "emptyState": "暂无成员。添加一些成员以查看图谱。",
     "backToGraph": "返回图谱",
-    "viewDetails": "查看详情"
+    "viewDetails": "查看详情",
+    "viewFullDetails": "查看完整详情",
+    "born": "出生",
+    "died": "去世",
+    "closePopup": "关闭"
   },
   "person": {
     "editPerson": "编辑成员",
