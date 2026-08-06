@@ -608,6 +608,14 @@ legend {
   position: relative;
   width: 100%;
   height: calc(100vh - 64px);
+  overflow: hidden;
+}
+
+.graph-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: #fafbfc;
 }
 
 .graph-toolbar {
@@ -617,6 +625,137 @@ legend {
   z-index: 10;
   display: flex;
   gap: 8px;
+}
+
+/* Graph nodes */
+.graph-svg .node {
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+.graph-svg .node.dimmed {
+  opacity: 0.2;
+}
+
+.graph-svg .node.highlighted {
+  opacity: 1;
+}
+
+.graph-svg .node.selected-node circle.node-circle {
+  stroke: #ff9800;
+  stroke-width: 3.5;
+  filter: drop-shadow(0 0 6px rgba(255, 152, 0, 0.4));
+}
+
+.graph-svg .node:hover circle.node-circle {
+  stroke-width: 3;
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.15));
+}
+
+/* Graph links */
+.graph-svg .links line,
+.graph-svg .links path {
+  transition: opacity 0.3s;
+}
+
+.graph-svg .links line.dimmed,
+.graph-svg .links path.dimmed {
+  opacity: 0.1;
+}
+
+/* Person popup */
+.graph-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.graph-popup {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 28px;
+  max-width: 420px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.graph-popup-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  cursor: pointer;
+  color: var(--text-light);
+  line-height: 1;
+}
+
+.graph-popup-close:hover {
+  color: var(--text);
+}
+
+.graph-popup-name {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  padding-right: 32px;
+}
+
+.graph-popup-info {
+  margin-bottom: 16px;
+}
+
+.graph-popup-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.graph-popup-label {
+  color: var(--text-light);
+  font-weight: 500;
+  min-width: 60px;
+}
+
+.graph-popup-section {
+  margin-bottom: 12px;
+}
+
+.graph-popup-section h4 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-light);
+  margin-bottom: 6px;
+}
+
+.graph-popup-section ul {
+  list-style: none;
+  padding: 0;
+}
+
+.graph-popup-section li {
+  padding: 3px 0;
+  font-size: 0.9rem;
+}
+
+.graph-popup-link {
+  margin-top: 16px;
+  width: 100%;
+  text-align: center;
 }
 
 /* States */
