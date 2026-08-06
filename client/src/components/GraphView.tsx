@@ -12,7 +12,6 @@ import {
   getSpouseIds,
   NODE_RADIUS,
   type LayoutNode,
-  type LayoutLink,
 } from './graphLayout';
 
 function GraphView() {
@@ -30,10 +29,17 @@ function GraphView() {
   const [selectedId, setSelectedId] = useState<string | null>(urlPersonId || null);
   const [popupPerson, setPopupPerson] = useState<PersonDetail | null>(null);
   const [showPopup, setShowPopup] = useState(false);
+  const [popupLoading, setPopupLoading] = useState(false);
 
   // Store layout data for interaction handlers
   const layoutRef = useRef<ReturnType<typeof buildLayout> | null>(null);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+
+  // Click/dblclick debounce timer ref
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Drag state tracking to prevent deselection after pan
+  const isDraggedRef = useRef(false);
 
   useEffect(() => {
     getGraph()
@@ -49,7 +55,7 @@ function GraphView() {
     }
   }, [urlPersonId]);
 
-  // Main rendering effect
+  // Main rendering effect - does NOT depend on selectedId
   useEffect(() => {
     if (!graphData || !svgRef.current || !containerRef.current) return;
     if (graphData.nodes.length === 0) return;
@@ -66,13 +72,20 @@ function GraphView() {
 
     svg.attr('width', width).attr('height', height);
 
-    // Zoom behavior
+    // Zoom behavior with drag tracking
     const g = svg.append('g').attr('class', 'graph-main');
 
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 3])
+      .on('start', () => {
+        isDraggedRef.current = false;
+      })
       .on('zoom', (event) => {
         g.attr('transform', event.transform.toString());
+        // Mark as dragged if the event is from user interaction (not programmatic)
+        if (event.sourceEvent) {
+          isDraggedRef.current = true;
+        }
       });
 
     svg.call(zoom);
@@ -87,7 +100,6 @@ function GraphView() {
       if (!sourcePos || !targetPos) continue;
 
       if (link.type === 'spouse') {
-        // Horizontal marriage line between spouses
         linksGroup.append('line')
           .attr('class', 'link-spouse')
           .attr('data-source', link.sourceId)
@@ -100,7 +112,6 @@ function GraphView() {
           .attr('stroke-width', 2)
           .attr('stroke-dasharray', link.isDivorced ? '6,4' : 'none');
       } else {
-        // Parent-child: vertical line with a step
         const midY = sourcePos.y + (targetPos.y - sourcePos.y) / 2;
         const path = `M ${sourcePos.x} ${sourcePos.y + NODE_RADIUS}
                       L ${sourcePos.x} ${midY}
@@ -126,7 +137,10 @@ function GraphView() {
       .append('g')
       .attr('class', 'node')
       .attr('data-id', d => d.id)
-      .attr('transform', d => `translate(${d.x}, ${d.y})`);
+      .attr('transform', d => `translate(${d.x}, ${d.y})`)
+      .attr('tabindex', '0')
+      .attr('role', 'button')
+      .attr('aria-label', d => getDisplayName(d.node, locale));
 
     // Circle avatar
     nodeGroups.append('circle')
@@ -190,21 +204,48 @@ function GraphView() {
         return '';
       });
 
-    // Click handler
+    // Click handler with debounce to avoid flash on double-click
     nodeGroups.on('click', function(event, d) {
       event.stopPropagation();
-      handleNodeClick(d.id);
+      // Clear any pending click timer (a new click or dblclick supersedes)
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
+      }
+      // Delay single-click action to differentiate from dblclick
+      clickTimerRef.current = setTimeout(() => {
+        clickTimerRef.current = null;
+        handleNodeClick(d.id);
+      }, 250);
     });
 
     // Double-click handler
     nodeGroups.on('dblclick', function(event, d) {
       event.stopPropagation();
       event.preventDefault();
+      // Cancel pending single-click
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
+      }
       handleNodeDblClick(d.id);
     });
 
-    // Click on background to deselect
+    // Keyboard handler on nodes
+    nodeGroups.on('keydown', function(event, d) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        event.stopPropagation();
+        handleNodeClick(d.id);
+      }
+    });
+
+    // Click on background to deselect (skip if drag/pan just happened)
     svg.on('click', () => {
+      if (isDraggedRef.current) {
+        isDraggedRef.current = false;
+        return;
+      }
       setSelectedId(null);
       clearHighlight();
       if (urlPersonId) {
@@ -227,9 +268,9 @@ function GraphView() {
 
     svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
 
-    // If there's a selected person, highlight them after render
-    if (selectedId && positions.has(selectedId)) {
-      setTimeout(() => handleNodeClick(selectedId), 300);
+    // If there's a pre-selected person (from URL), highlight after initial render
+    if (urlPersonId && positions.has(urlPersonId)) {
+      setTimeout(() => handleNodeClick(urlPersonId), 300);
     }
 
     function handleNodeClick(nodeId: string) {
@@ -239,12 +280,18 @@ function GraphView() {
     }
 
     function handleNodeDblClick(nodeId: string) {
+      // Show popup immediately with loading state
+      setPopupPerson(null);
+      setPopupLoading(true);
+      setShowPopup(true);
       getPerson(nodeId)
         .then(detail => {
           setPopupPerson(detail);
-          setShowPopup(true);
         })
-        .catch(console.error);
+        .catch(console.error)
+        .finally(() => {
+          setPopupLoading(false);
+        });
     }
 
     function applyHighlight(nodeId: string) {
@@ -253,13 +300,11 @@ function GraphView() {
       const spouses = getSpouseIds(nodeId, spousePairs);
       const highlighted = new Set<string>([nodeId, ...ancestors, ...descendants, ...spouses]);
 
-      // Dim all nodes
       nodesGroup.selectAll<SVGGElement, LayoutNode>('g.node')
         .classed('dimmed', d => !highlighted.has(d.id))
         .classed('highlighted', d => highlighted.has(d.id))
         .classed('selected-node', d => d.id === nodeId);
 
-      // Dim links
       linksGroup.selectAll<SVGLineElement, unknown>('line.link-spouse')
         .classed('dimmed', function() {
           const s = this.getAttribute('data-source')!;
@@ -294,12 +339,98 @@ function GraphView() {
         .duration(600)
         .call(zoom.transform, d3.zoomIdentity.translate(tx2, ty2).scale(targetScale));
     }
-  }, [graphData, locale, selectedId, urlPersonId, navigate]);
+
+    // Cleanup click timer on unmount
+    return () => {
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
+      }
+    };
+  }, [graphData, locale, urlPersonId, navigate]);
+
+  // Separate effect for handling selection changes without full SVG rebuild
+  useEffect(() => {
+    if (!svgRef.current || !layoutRef.current) return;
+    // Only run when selectedId changes after initial render (not from URL preset)
+    const { positions, spousePairs, parentChildMap, childParentMap } = layoutRef.current;
+
+    const svg = d3.select(svgRef.current);
+    const nodesGroup = svg.select<SVGGElement>('g.nodes');
+    const linksGroup = svg.select<SVGGElement>('g.links');
+
+    if (nodesGroup.empty() || linksGroup.empty()) return;
+
+    if (!selectedId) {
+      // Clear all highlights
+      nodesGroup.selectAll('g.node')
+        .classed('dimmed', false)
+        .classed('highlighted', false)
+        .classed('selected-node', false);
+      linksGroup.selectAll('line.link-spouse').classed('dimmed', false);
+      linksGroup.selectAll('path.link-parent-child').classed('dimmed', false);
+      return;
+    }
+
+    if (!positions.has(selectedId)) return;
+
+    const ancestors = getAncestorIds(selectedId, childParentMap);
+    const descendants = getDescendantIds(selectedId, parentChildMap);
+    const spouses = getSpouseIds(selectedId, spousePairs);
+    const highlighted = new Set<string>([selectedId, ...ancestors, ...descendants, ...spouses]);
+
+    nodesGroup.selectAll<SVGGElement, LayoutNode>('g.node')
+      .classed('dimmed', d => !highlighted.has(d.id))
+      .classed('highlighted', d => highlighted.has(d.id))
+      .classed('selected-node', d => d.id === selectedId);
+
+    linksGroup.selectAll<SVGLineElement, unknown>('line.link-spouse')
+      .classed('dimmed', function() {
+        const s = this.getAttribute('data-source')!;
+        const t2 = this.getAttribute('data-target')!;
+        return !highlighted.has(s) || !highlighted.has(t2);
+      });
+
+    linksGroup.selectAll<SVGPathElement, unknown>('path.link-parent-child')
+      .classed('dimmed', function() {
+        const s = this.getAttribute('data-source')!;
+        const t2 = this.getAttribute('data-target')!;
+        return !highlighted.has(s) || !highlighted.has(t2);
+      });
+
+    // Animate to the selected node
+    if (zoomRef.current && containerRef.current) {
+      const pos = positions.get(selectedId);
+      if (pos) {
+        const width = containerRef.current.clientWidth;
+        const height = containerRef.current.clientHeight;
+        const targetScale = 1.2;
+        const tx = width / 2 - pos.x * targetScale;
+        const ty = height / 2 - pos.y * targetScale;
+        const svg2 = d3.select(svgRef.current);
+        svg2.transition()
+          .duration(600)
+          .call(zoomRef.current.transform, d3.zoomIdentity.translate(tx, ty).scale(targetScale));
+      }
+    }
+  }, [selectedId]);
 
   const handleClosePopup = useCallback(() => {
     setShowPopup(false);
     setPopupPerson(null);
+    setPopupLoading(false);
   }, []);
+
+  // Global keyboard handler for Escape to close popup
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && showPopup) {
+        handleClosePopup();
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showPopup, handleClosePopup]);
 
   if (loading) return <div className="loading">{t('common.loading')}</div>;
   if (error) return <div className="error">{t('common.error', { message: error })}</div>;
@@ -320,9 +451,10 @@ function GraphView() {
   return (
     <div className="graph-container" ref={containerRef}>
       <svg ref={svgRef} className="graph-svg" />
-      {showPopup && popupPerson && (
+      {showPopup && (
         <PersonPopup
           person={popupPerson}
+          loading={popupLoading}
           locale={locale}
           onClose={handleClosePopup}
           onNavigate={(personId) => {
@@ -337,22 +469,46 @@ function GraphView() {
 }
 
 interface PersonPopupProps {
-  person: PersonDetail;
+  person: PersonDetail | null;
+  loading: boolean;
   locale: string;
   onClose: () => void;
   onNavigate: (id: string) => void;
   t: (key: string) => string;
 }
 
-function PersonPopup({ person, locale, onClose, onNavigate, t }: PersonPopupProps) {
+function PersonPopup({ person, loading, locale, onClose, onNavigate, t }: PersonPopupProps) {
+  const popupRef = useRef<HTMLDivElement>(null);
+
+  // Focus trap: focus the popup when it opens
+  useEffect(() => {
+    if (popupRef.current) {
+      popupRef.current.focus();
+    }
+  }, []);
+
+  if (loading || !person) {
+    return (
+      <div className="graph-popup-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label={t('common.loading')}>
+        <div className="graph-popup" onClick={e => e.stopPropagation()} ref={popupRef} tabIndex={-1}>
+          <button className="graph-popup-close" onClick={onClose} aria-label={t('graph.closePopup')}>&times;</button>
+          <div className="graph-popup-loading">
+            <div className="graph-popup-spinner" />
+            <span>{t('common.loading')}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const displayName = getDisplayName(person, locale);
   const birthYear = person.lifeFrom ? person.lifeFrom.substring(0, 10) : '';
   const deathDate = person.lifeEnd ? person.lifeEnd.substring(0, 10) : '';
 
   return (
-    <div className="graph-popup-overlay" onClick={onClose}>
-      <div className="graph-popup" onClick={e => e.stopPropagation()}>
-        <button className="graph-popup-close" onClick={onClose}>&times;</button>
+    <div className="graph-popup-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label={displayName}>
+      <div className="graph-popup" onClick={e => e.stopPropagation()} ref={popupRef} tabIndex={-1}>
+        <button className="graph-popup-close" onClick={onClose} aria-label={t('graph.closePopup')}>&times;</button>
         <h3 className="graph-popup-name">{displayName}</h3>
 
         <div className="graph-popup-info">

@@ -78,9 +78,11 @@ export function buildLayout(nodes: GraphNode[], edges: GraphEdge[]) {
 
   for (const id of nodeIds) getGeneration(id, new Set());
 
-  // Unify spouses to same generation and propagate
+  // Unify spouses to same generation and propagate (with iteration cap to prevent infinite loops)
   let changed = true;
-  while (changed) {
+  let iterations = 0;
+  const maxIterations = nodeIds.length * 2;
+  while (changed && iterations++ < maxIterations) {
     changed = false;
     for (const pairKey of spousePairs.keys()) {
       const [p1, p2] = pairKey.split('|');

@@ -29,5 +29,5 @@
     "cd /projects/sandbox/family-tree/client && npm run build"
   ],
   "blocked_reason": null,
-  "findings": "All acceptance criteria met. TypeScript compilation passes (tsc --noEmit exits 0). Vite production build succeeds with bundle size reduced from 509KB to 375KB by removing @xyflow/react and dagre in favor of d3. The new GraphView uses D3 for SVG-based rendering with a custom generational layout algorithm. AncestryView simplified to a thin wrapper. New i18n keys added for the popup. CSS styles added for circular avatars, highlighting, dimming, and the detail popup modal."
+  "findings": "All acceptance criteria met. TypeScript compilation passes (tsc --noEmit exits 0). Vite production build succeeds. Review fixes applied: (1) selectedId removed from main useEffect deps, highlight handled in separate effect; (2) iteration cap added to fixpoint loop in graphLayout.ts; (3) popup shows loading spinner immediately on double-click; (4) click/dblclick debounce timer (250ms) prevents flash; (5) drag state tracked via isDraggedRef to prevent deselection after pan; (6) keyboard accessibility added with tabindex, role, aria-label on nodes, Enter/Space to select, Escape to close popup, focus management in popup."
 }
