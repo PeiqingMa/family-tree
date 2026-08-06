@@ -1,0 +1,33 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Completely rewrite the GraphView and AncestryView components using D3.js for a traditional top-down family tree layout with circular avatars, generational rows, marriage lines, and interactive highlighting/details popup. Replace the existing @xyflow/react-based implementation with a custom D3-based canvas that supports: click to center and highlight ancestors/descendants/spouses, double-click to show a person detail popup.",
+  "status": "pending",
+  "steps": [
+    "Step 1 - Install new dependencies: Add d3 and @types/d3 to client/package.json. Remove @xyflow/react and dagre and @types/dagre since they will no longer be needed.",
+    "Step 2 - Create the new GraphView component at client/src/components/GraphView.tsx (complete rewrite). The new component should: (a) Fetch graph data from getGraph() API. (b) Build an internal tree structure from the flat nodes/edges data. Identify generations by computing depth from root ancestors. Group couples (spouse edges). Attach children to their parent couples. (c) Use D3 to render an SVG-based family tree with top-down generational layout: ancestors at top, descendants at bottom. Each generation on its own horizontal row with generous vertical spacing (150-200px between generations). (d) Each person rendered as a circular avatar (with initials or a colored circle based on gender - blue for male, pink for female, gray for unknown) with their name displayed below the circle and life dates (birth-death years) below the name. (e) Couples connected by a horizontal marriage line between their circles. Children connected via vertical lines dropping down from the center of the marriage line. For divorced couples (where spouseEnd exists), use dashed lines. (f) Support zooming and panning via D3 zoom behavior. (g) On single click of a person: pan/animate to center that person in the viewport, highlight all their ancestors (upward path), all their descendants (downward path), and their spouse(s). Non-highlighted nodes should be dimmed/faded. Show a subtle background highlight (cream/beige box) around the selected person. (h) On double click of a person: show a modal/popup overlay with the person's details fetched from getPerson(id) API. The popup should show: full name, gender, birth/death dates, birth/death places, parents list, children list, spouses list, and a link to navigate to their full detail page (/persons/:id). (i) Support i18n via useTranslation hook for any labels. (j) Responsive - fill available space in the main content area.",
+    "Step 3 - Update the AncestryView component at client/src/components/AncestryView.tsx to use the same D3-based rendering approach (or simplify it to redirect to the GraphView with the person pre-selected/highlighted). Since the new GraphView will support clicking a person to highlight their ancestry, the AncestryView route (/graph/:id) should now load the full graph but with that person pre-selected and highlighted (ancestors and descendants visible). This means AncestryView can either become a thin wrapper that renders GraphView with a selectedPersonId prop, or the GraphView itself can read the :id param and auto-select.",
+    "Step 4 - Update client/src/App.tsx routes if needed. The /graph route should render the new GraphView. The /graph/:id route should render GraphView with the person pre-selected.",
+    "Step 5 - Update client/src/index.css to add styles for the new graph: .graph-container should fill available space, add styles for the person detail popup/modal overlay, add styles for highlighted vs dimmed nodes, add styles for the avatar circles, name labels, and connection lines.",
+    "Step 6 - Update i18n files (en.json and zh.json) to add any new translation keys needed for the popup (e.g., 'graph.closePopup', 'graph.viewFullDetails', 'graph.born', 'graph.died', etc.).",
+    "Step 7 - Remove unused imports and clean up. Remove any references to @xyflow/react or dagre from the codebase."
+  ],
+  "acceptance_criteria": [
+    "The graph view displays a top-down generational family tree with circular person nodes.",
+    "Couples are connected by horizontal marriage lines; children drop down from the marriage line center.",
+    "Divorced couples show dashed marriage lines.",
+    "Single-clicking a person centers them and highlights their ancestors, descendants, and spouses while dimming others.",
+    "Double-clicking a person shows a popup/modal with their details (name, dates, places, relations).",
+    "The /graph/:id route pre-selects and highlights the person with that ID.",
+    "Panning and zooming work smoothly.",
+    "TypeScript compilation passes (tsc --noEmit).",
+    "Vite production build succeeds (npm run build).",
+    "i18n translations are maintained for both English and Chinese."
+  ],
+  "verification": [
+    "cd /projects/sandbox/family-tree/client && npx tsc --noEmit",
+    "cd /projects/sandbox/family-tree/client && npm run build"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

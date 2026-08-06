@@ -1,0 +1,7 @@
+{
+  "task_id": "task-rewrite-graph-view",
+  "task_description": "Rewrite the family tree graph view frontend to use D3.js with a traditional top-down generational layout featuring circular avatars, marriage lines, interactive click-to-highlight (ancestors/descendants/spouses), and double-click detail popup.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002"],
+  "blocked_reason": null
+}
