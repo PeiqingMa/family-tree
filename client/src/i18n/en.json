@@ -2,7 +2,7 @@
   "nav": {
     "familyTree": "Family Tree",
     "tableView": "Table View",
-    "graphView": "Graph View",
+    "graphView": "Tree View",
     "addPerson": "+ Add Person"
   },
   "table": {
@@ -16,10 +16,22 @@
     "birthPlace": "Birth Place"
   },
   "graph": {
-    "title": "Family Graph",
-    "emptyState": "No people added yet. Add some people to see the graph.",
-    "backToGraph": "Back to Graph",
-    "viewDetails": "View Details"
+    "title": "Family Tree",
+    "emptyState": "No people added yet. Add some people to see the tree.",
+    "viewDetails": "View Details",
+    "ancestorGenerations": "Generations up",
+    "descendantGenerations": "Generations down",
+    "autoCenter": "Recentre on drag",
+    "recenter": "Centre",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "clickToCenter": "Click to put this person in the centre",
+    "centerOn": "Release to centre on {{name}}",
+    "dragHint": "Drag to explore, scroll to zoom, click a person to centre the tree on them",
+    "legendMarried": "Married",
+    "legendEnded": "Marriage ended",
+    "legendLineage": "Direct line",
+    "truncated": "This part of the family is very large, so only the closest relatives are shown."
   },
   "person": {
     "editPerson": "Edit Person",

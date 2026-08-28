@@ -7,6 +7,8 @@ import type {
   CreateRelationWithPersonData,
   TreeNode,
   GraphData,
+  NeighborhoodData,
+  NeighborhoodOptions,
 } from './types';
 
 const api = axios.create({
@@ -126,4 +128,19 @@ export async function getDescendants(id: string): Promise<TreeNode> {
 export async function getGraph(): Promise<GraphData> {
   const res = await api.get('/tree/graph');
   return res.data;
+}
+
+/** Fetch the bounded graph around one person for the generational tree view. */
+export async function getNeighborhood(
+  id: string,
+  options: NeighborhoodOptions = {}
+): Promise<NeighborhoodData> {
+  const res = await api.get(`/tree/neighborhood/${id}`, { params: options });
+  return res.data;
+}
+
+/** Ask the server which person the tree should open on when nothing is stored. */
+export async function getDefaultFocus(): Promise<string | null> {
+  const res = await api.get('/tree/default-focus');
+  return res.data?.id ?? null;
 }

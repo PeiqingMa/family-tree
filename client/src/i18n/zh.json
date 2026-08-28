@@ -2,7 +2,7 @@
   "nav": {
     "familyTree": "家族树",
     "tableView": "表格视图",
-    "graphView": "图谱视图",
+    "graphView": "家族树视图",
     "addPerson": "+ 添加成员"
   },
   "table": {
@@ -16,10 +16,22 @@
     "birthPlace": "出生地"
   },
   "graph": {
-    "title": "家族图谱",
-    "emptyState": "暂无成员。添加一些成员以查看图谱。",
-    "backToGraph": "返回图谱",
-    "viewDetails": "查看详情"
+    "title": "家族树",
+    "emptyState": "暂无成员。添加一些成员以查看家族树。",
+    "viewDetails": "查看详情",
+    "ancestorGenerations": "向上代数",
+    "descendantGenerations": "向下代数",
+    "autoCenter": "拖动后自动居中",
+    "recenter": "回到中心",
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
+    "clickToCenter": "点击将此人置于中心",
+    "centerOn": "松开鼠标以 {{name}} 为中心",
+    "dragHint": "拖动查看，滚轮缩放，点击成员即以其为中心",
+    "legendMarried": "婚姻",
+    "legendEnded": "婚姻已结束",
+    "legendLineage": "直系血脉",
+    "truncated": "该家族分支过大，仅显示最近的亲属。"
   },
   "person": {
     "editPerson": "编辑成员",
