@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { getDb } from '../database';
 import { Relation, RelationCreate, RelationWithPersonCreate } from '../models/relation';
 import { requireAuth } from '../middleware/auth';
@@ -39,7 +39,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       return res.status(409).json({ error: 'This relation already exists' });
     }
 
-    const relationId = uuidv4();
+    const relationId = randomUUID();
     const now = new Date().toISOString();
 
     await db('relations').insert({
@@ -88,7 +88,7 @@ router.post('/with-person', requireAuth, async (req: Request, res: Response) => 
     }
 
     // Create the new person
-    const newPersonId = uuidv4();
+    const newPersonId = randomUUID();
     const now = new Date().toISOString();
 
     await db('persons').insert({
@@ -108,7 +108,7 @@ router.post('/with-person', requireAuth, async (req: Request, res: Response) => 
     if (body.newPerson.names && body.newPerson.names.length > 0) {
       for (const name of body.newPerson.names) {
         await db('person_names').insert({
-          id: uuidv4(),
+          id: randomUUID(),
           person_id: newPersonId,
           family_name: name.familyName || null,
           given_name: name.givenName || null,
@@ -121,7 +121,7 @@ router.post('/with-person', requireAuth, async (req: Request, res: Response) => 
     }
 
     // Create the relation
-    const relationId = uuidv4();
+    const relationId = randomUUID();
 
     // Determine direction: the existing person is "from", new person is "to"
     await db('relations').insert({

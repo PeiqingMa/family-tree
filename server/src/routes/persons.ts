@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { getDb } from '../database';
 import { Person, PersonCreate, PersonName, PersonSummary, PersonUpdate, RelationView } from '../models/person';
 import { requireAuth } from '../middleware/auth';
@@ -141,7 +141,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'At least one name must have a givenName or familyName' });
     }
 
-    const personId = uuidv4();
+    const personId = randomUUID();
     const now = new Date().toISOString();
 
     await db('persons').insert({
@@ -161,7 +161,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
     if (body.names && body.names.length > 0) {
       for (const name of body.names) {
         await db('person_names').insert({
-          id: uuidv4(),
+          id: randomUUID(),
           person_id: personId,
           family_name: name.familyName || null,
           given_name: name.givenName || null,
@@ -224,7 +224,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response) => {
       await db('person_names').where('person_id', req.params.id).delete();
       for (const name of body.names) {
         await db('person_names').insert({
-          id: uuidv4(),
+          id: randomUUID(),
           person_id: req.params.id,
           family_name: name.familyName || null,
           given_name: name.givenName || null,

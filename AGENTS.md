@@ -34,9 +34,10 @@ npm test      --workspace=server         # jest
 npx tsx client/scripts/verify-layout.ts  # family tree layout invariants
 ```
 
-There is no test runner or linter on the client. Treat
-`npm run build --workspace=client` as the gate: `tsconfig.json` is `strict`, so a
-clean build is meaningful.
+The server has supertest integration tests covering the persons and relations
+routes; they should be green before and after your change. There is no test
+runner or linter on the client, so treat `npm run build --workspace=client` as the
+gate there: `tsconfig.json` is `strict`, so a clean build is meaningful.
 
 The SQLite file lives in `server/data/` (gitignored) and is created on first
 start, together with an `admin` / `admin123` user. Delete the directory to reset.
@@ -67,6 +68,10 @@ contain it. Use `\u0000` (see `pairKey`).
 explicitly in the route, do not leak row shapes. Dates (`lifeFrom`, `lifeEnd`,
 `spouseFrom`, `spouseEnd`) are free text, so they may be `1920`, `1920-05` or
 `1920-05-03` - never `new Date()` them, compare or slice the strings.
+
+**Ids.** Primary keys are UUIDs from `randomUUID()` in the built-in `node:crypto`.
+Do not add a uuid package for this: the last one to be added was ESM only, which
+broke the whole Jest suite, and the standard library already does the job.
 
 **Auth.** `authenticateToken` runs globally and only populates `req.user`. Reads
 are public; guard mutations with `requireAuth`, and user administration with
@@ -111,9 +116,9 @@ the family tree); there is no CSS-in-JS or utility framework.
   the actual behaviour (an endpoint call, a browser interaction) rather than
   relying on a command exiting zero.
 
-## Known issue
+## Dependencies
 
-`npm test --workspace=server` currently fails to start: Jest cannot load
-`uuid@14`, which is ESM only. It needs a `moduleNameMapper` or transform entry in
-`server/jest.config.ts`. This is pre-existing and unrelated to whatever you are
-working on - do not let it convince you that your change broke the tests.
+Jest runs the server tests through the CommonJS runtime, which cannot `require()`
+an ESM-only package even though plain `node` can. Before adding a runtime
+dependency to the server, check that it ships a CommonJS build, or the test suite
+will stop loading entirely. Prefer the standard library where it suffices.

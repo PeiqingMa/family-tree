@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { getDb } from '../database';
@@ -33,7 +33,7 @@ router.post('/register', async (req: Request, res: Response) => {
     }
 
     const passwordHash = await bcrypt.hash(body.password, 10);
-    const userId = uuidv4();
+    const userId = randomUUID();
     const now = new Date().toISOString();
 
     await db('users').insert({

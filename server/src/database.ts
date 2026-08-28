@@ -1,7 +1,7 @@
 import knex, { Knex } from 'knex';
 import path from 'path';
 import bcrypt from 'bcryptjs';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 
 let db: Knex;
 
@@ -84,7 +84,7 @@ async function createTables(db: Knex): Promise<void> {
     });
 
     // Seed default admin user
-    const adminId = uuidv4();
+    const adminId = randomUUID();
     const passwordHash = bcrypt.hashSync('admin123', 10);
     await db('users').insert({
       id: adminId,
