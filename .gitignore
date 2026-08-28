@@ -3,6 +3,7 @@ dist/
 *.js.map
 *.d.ts
 !jest.config.ts
+*.tsbuildinfo
 
 # Database files
 server/data/

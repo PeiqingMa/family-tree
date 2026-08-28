@@ -55,8 +55,12 @@ export interface GraphNode {
   id: string;
   names: PersonName[];
   bioGender?: string;
+  socialGender?: string;
   lifeFrom?: string;
   lifeEnd?: string;
+  birthPlace?: string;
+  deathPlace?: string;
+  photos?: string[];
 }
 
 export interface GraphEdge {
@@ -72,6 +76,21 @@ export interface GraphEdge {
 export interface GraphData {
   nodes: GraphNode[];
   edges: GraphEdge[];
+}
+
+/** The graph around one person, as returned by GET /api/tree/neighborhood/:id. */
+export interface NeighborhoodData extends GraphData {
+  rootId: string;
+  up: number;
+  down: number;
+  collateral: number;
+  truncated: boolean;
+}
+
+export interface NeighborhoodOptions {
+  up?: number;
+  down?: number;
+  collateral?: number;
 }
 
 export interface CreatePersonData {

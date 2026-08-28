@@ -4,8 +4,7 @@ import Layout from './components/Layout';
 import PersonTable from './components/PersonTable';
 import PersonDetail from './components/PersonDetail';
 import PersonForm from './components/PersonForm';
-import GraphView from './components/GraphView';
-import AncestryView from './components/AncestryView';
+import FamilyTreeView from './components/FamilyTreeView';
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import UserManagement from './components/UserManagement';
@@ -44,8 +43,8 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route path="/graph" element={<GraphView />} />
-        <Route path="/graph/:id" element={<AncestryView />} />
+        <Route path="/graph" element={<FamilyTreeView />} />
+        <Route path="/graph/:id" element={<FamilyTreeView />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route
